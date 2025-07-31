@@ -1,0 +1,90 @@
+--- llviewerdisplay.cpp	2025-07-31 14:29:21.414480200 -0400
++++ sgeo-min-llviewerdisplay.cpp	2025-07-31 14:29:01.398451800 -0400
+@@ -80,6 +80,12 @@
+ 
+ #include "llenvironment.h"
+ #include "llperfstats.h"
++
++//################################### P373R ######################################
++#include "llviewerVR.cpp"
++llviewerVR gVR;
++//################################### END P373R ##################################
++
+ // [RLVa:KB] - Checked: 2011-05-22 (RLVa-1.3.1a)
+ #include "llvisualeffect.h"
+ #include "rlvactions.h"
+@@ -789,6 +795,12 @@
+             gPipeline.toggleRenderType(LLPipeline::RENDER_TYPE_HUD_PARTICLES);
+         }
+ 
++		//################################### P373R ######################################
++		sec:
++		gVR.ProcessVRCamera();
++		//################################### END P373R ##################################
++		
++
+         stop_glerror();
+         display_update_camera();
+         stop_glerror();
+@@ -1124,7 +1136,29 @@
+         if (!for_snapshot)
+         {
+             render_ui();
+-            swap();
++			//################################### P373R ######################################
++			gVR.vrDisplay();
++
++			//################################### END P373R ######################################
++			//swap();
++			//################################### P373R ######################################
++			if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.eyeDistance() > 0)
++			{
++				goto sec;
++
++
++			}
++			if (!gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady)
++			{
++				//gVR.HandleInput();
++
++			}
++			if (!gVR.m_bVrActive)
++ 			swap();
++
++			//################################### END P373R ##################################
++			//swap();
++			
+         }
+ 
+ 
+@@ -1669,6 +1703,10 @@
+     gUIProgram.bind();
+     gGL.color4f(1, 1, 1, 1);
+ 
++	//################################### P373R ######################################
++	gVR.RenderControllerAxes();
++	//################################### END P373R ##################################
++
+     // Coordinate axes
+     // <FS:Ansariel> gSavedSettings replacement
+     //if (gSavedSettings.getBOOL("ShowAxes"))
+@@ -1819,6 +1857,9 @@
+         gViewerWindow->draw();
+     }
+ 
++	//################################### P373R ######################################
++	gVR.DrawCursors();
++	//################################### END P373R ##################################
+ 
+ 
+     // reset current origin for font rendering, in case of tiling render
+@@ -1904,6 +1945,9 @@
+ 
+ void display_cleanup()
+ {
++	//################################### P373R ######################################
++	gVR.vrStartup(TRUE);
++	//################################### END P373R ######################################
+     gDisconnectedImagep = NULL;
+ }
+ 
