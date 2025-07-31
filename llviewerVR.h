@@ -1,6 +1,7 @@
 #pragma once
 
 #include <openvr.h>
+#include "glh/glh_linear.h"
 #include "llhudtext.h"
 #include "llgl.h"
 #include "string.h"
