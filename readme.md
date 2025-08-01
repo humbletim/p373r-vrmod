@@ -40,5 +40,5 @@ The mod does not implement a true 3D user interface. Instead, it uses a clever "
 4. **Build:** Configure and build the viewer as usual.
 5. **Deploy DLL:** Copy `openvr_api.dll` into the same directory as the compiled viewer executable.
 
-For more detailed instructions on contributing, please see the `CONTRIBUTING.md` file.
+For more detailed instructions on contributing, please see the [`CONTRIBUTING.md`](./CONTRIBUTING.md) file.
 
