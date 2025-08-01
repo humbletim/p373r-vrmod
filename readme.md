@@ -16,10 +16,13 @@ The mod intercepts the final rendered frame from Firestorm's rendering pipeline,
 
 The core logic of the VR mod is contained in a small number of files:
 
-- **`llviewerVR.h` and `llviewerVR.cpp`**: These files contain the `llviewerVR` class, which encapsulates all the VR-specific logic. This includes initializing and shutting down the OpenVR runtime, creating the framebuffers for each eye, handling controller input, processing head tracking data, and submitting the final frames to the compositor.
-- **`0001-P373R-6.6.8-baseline-diff.patch`**: This patch file contains the necessary modifications to the upstream Firestorm source code, primarily in `llviewerdisplay.cpp`, to hook the VR mod into the viewer's main render loop.
-- **`sgeo-minimal/`**: This directory contains a popular community-contributed variation of the mod by user Sgeo. It refines the original approach by automatically configuring VR settings based on the headset's capabilities, removing the need for manual tweaking via the F5 menu.
-- **`3p-openvr/`**: This directory contains helper scripts for packaging the OpenVR SDK into a format compatible with Firestorm's `autobuild` system. This is primarily for automating the build process and is not essential for understanding the core VR mod logic.
+- **`p373r/`**:
+  - **[`llviewerVR.h`](./p373r/llviewerVR.h) and [`llviewerVR.cpp`](./p373r/llviewerVR.cpp)**: These files contain the `llviewerVR` class, which encapsulates all the VR-specific logic. This includes initializing and shutting down the OpenVR runtime, creating the framebuffers for each eye, handling controller input, processing head tracking data, and submitting the final frames to the compositor.
+  - **[`0001-P373R-6.6.8-baseline-diff.patch`](./p373r/0001-P373R-6.6.8-baseline-diff.patch)**: This patch file contains the necessary modifications to the upstream Firestorm source code, primarily in [*llviewerdisplay.cpp*](https://github.com/FirestormViewer/phoenix-firestorm/blob/master/indra/newview/llviewerdisplay.cpp), to hook the VR mod into the viewer's main render loop.
+
+Also in this repo:
+- **`sgeo-minimal/`**: This directory contains a popular community-contributed variation of the mod by user @Sgeo. It refines the original approach by automatically configuring VR settings based on the headset's capabilities, removing the need for manual tweaking via the F5 menu.
+- **`misc/3p-openvr/`**: This directory contains helper scripts for packaging the OpenVR SDK into a format compatible with Firestorm's `autobuild` system. This is primarily for automating the build process and is not essential for understanding the core VR mod logic.
 
 ### The Rendering Pipeline
 
@@ -34,11 +37,7 @@ The mod does not implement a true 3D user interface. Instead, it uses a clever "
 
 ## Instructions for Integrating into a Viewer Source Tree
 
-1. **Apply the Patch:** Apply the `0001-P373R-6.6.8-baseline-diff.patch` to `indra/newview/llviewerdisplay.cpp`.
-2. **Copy Core Files:** Copy `llviewerVR.cpp` and `llviewerVR.h` into the `indra/newview` directory.
-3. **Update CMake:** Modify `indra/newview/CMakeLists.txt` to include the path to `openvr.h` and to link against `openvr_api.lib`.
-4. **Build:** Configure and build the viewer as usual.
-5. **Deploy DLL:** Copy `openvr_api.dll` into the same directory as the compiled viewer executable.
+Please the [`p373r/BUILDING.md`](./p373r/BUILDING.md) file. The would be process is similar for integrating `sgeo-minimal/` instead.
 
 For more detailed instructions on contributing, please see the [`CONTRIBUTING.md`](./CONTRIBUTING.md) file.
 
