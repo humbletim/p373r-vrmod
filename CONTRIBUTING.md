@@ -17,7 +17,7 @@ Because of these constraints, we cannot accept large, complex pull requests or m
 The biggest hurdle to contributing to the VR mod is setting up a build environment. The Firestorm viewer is a large and complex application, and compiling it from source can be a challenge.
 
 1. **Follow the Official Guide:** The first step is to follow the official Firestorm guide for compiling the viewer from source. You can find the guide on the [Firestorm Wiki](https://wiki.firestormviewer.org/fs_compiling_firestorm).
-2. **Apply the VR Mod:** Once you have a working build environment, you can apply the VR mod by following the instructions in the [`readme.md`](./readme.md) file.
+2. **Apply the VR Mod:** Once you have a working build environment, you can apply the VR mod by following the instructions in the [`readme.md`](./readme.md#instructions-for-integrating-into-a-viewer-source-tree) file.
 3. **Join the Community:** The best place to get help and to discuss your ideas is the [P373R VR Mod Discord server](https://discordapp.com/channels/613119193734316042/613119193734316044) [ [Invite](https://discord.com/invite/QMJ9vCA) ].
 
 ## Good First Issues
