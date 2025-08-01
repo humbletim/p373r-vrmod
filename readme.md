@@ -17,8 +17,10 @@ The mod intercepts the final rendered frame from Firestorm's rendering pipeline,
 The core logic of the VR mod is contained in a small number of files:
 
 - **`p373r/`**:
-  - **[`llviewerVR.h`](./p373r/llviewerVR.h) and [`llviewerVR.cpp`](./p373r/llviewerVR.cpp)**: These files contain the `llviewerVR` class, which encapsulates all the VR-specific logic. This includes initializing and shutting down the OpenVR runtime, creating the framebuffers for each eye, handling controller input, processing head tracking data, and submitting the final frames to the compositor.
-  - **[`0001-P373R-6.6.8-baseline-diff.patch`](./p373r/0001-P373R-6.6.8-baseline-diff.patch)**: This patch file contains the necessary modifications to the upstream Firestorm source code, primarily in [*llviewerdisplay.cpp*](https://github.com/FirestormViewer/phoenix-firestorm/blob/master/indra/newview/llviewerdisplay.cpp), to hook the VR mod into the viewer's main render loop.
+
+  - **[`llviewerVR.h`](./p373r/llviewerVR.h) and [`llviewerVR.cpp`](./p373r/llviewerVR.cpp)** <br /> These files contain the `llviewerVR` class, which encapsulates all the VR-specific logic. This includes initializing and shutting down the OpenVR runtime, creating the framebuffers for each eye, handling controller input, processing head tracking data, and submitting the final frames to the compositor.
+
+  - **[`0001-P373R-6.6.8-baseline-diff.patch`](./p373r/0001-P373R-6.6.8-baseline-diff.patch)** <br /> This patch file contains the necessary modifications to the upstream Firestorm source code, primarily in [*llviewerdisplay.cpp*](https://github.com/FirestormViewer/phoenix-firestorm/blob/master/indra/newview/llviewerdisplay.cpp), to hook the VR mod into the viewer's main render loop.
 
 Also in this repo:
 - **`sgeo-minimal/`**: This directory contains a popular community-contributed variation of the mod by user @Sgeo. It refines the original approach by automatically configuring VR settings based on the headset's capabilities, removing the need for manual tweaking via the F5 menu.
