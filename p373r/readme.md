@@ -1,3 +1,8 @@
+
+### NOTE: Please see [./BUILDING.md](./BUILDING.md).
+
+---
+
 *Original notes from http://gsgrid.net/Firestorm_6.3.3_VR_Source.rar release:*
 
 ### Firestorm_6.3.3_VR_Source/Readme.txt @ Nov 28  2019
