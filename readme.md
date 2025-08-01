@@ -1,6 +1,6 @@
 # P373R's VR Mod for Firestorm Viewer
 
-*This repository contains the isolated source code for P373R's VR mod, originally released in 2019. It is maintained here to support the "Firestorm VR Mod" community edition, which is built using GitHub Actions. This repository provides a focused environment for understanding and experimenting with the VR mod's codebase.* 
+*This repository contains the isolated source code for P373R's VR mod, originally released in 2019. It is maintained here to support the "Firestorm VR Mod" [community release](https://github.com/humbletim/firestorm-gha/releases), which is built using GitHub Actions. This repository provides a focused environment for understanding and experimenting with the VR mod's codebase.* 
 
 This project is not a typical open-source endeavor. It exists as a minimal, additive patch set to the official Firestorm viewer. This approach is intentional to minimize merge conflicts with the rapidly evolving upstream codebase and to avoid the significant overhead of maintaining a full-fledged fork. The goal is to provide a stable, community-supported VR experience without becoming a separate Third-Party Viewer (TPV).
 
@@ -37,7 +37,7 @@ The mod does not implement a true 3D user interface. Instead, it uses a clever "
 
 ## Instructions for Integrating into a Viewer Source Tree
 
-Please the [`p373r/BUILDING.md`](./p373r/BUILDING.md) file. The would be process is similar for integrating `sgeo-minimal/` instead.
+Please seee [`p373r/BUILDING.md`](./p373r/BUILDING.md). The process would be similar for integrating `sgeo-minimal/` instead.
 
 For more detailed instructions on contributing, please see the [`CONTRIBUTING.md`](./CONTRIBUTING.md) file.
 
