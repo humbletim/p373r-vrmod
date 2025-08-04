@@ -8,6 +8,9 @@ on:
             required: true
         key:
             type: string
+
+run-name: devtime-test ${{ inputs.artifact }}
+
 jobs:
   debug:
     runs-on: windows-latest
@@ -47,7 +50,8 @@ jobs:
       - name: '  symlink inner dir'
         shell: bash
         run: |
-            cmd //c mklink //d "$base" "$(cygpath -w $snapshot_dir)"
+            set -x
+            cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir")
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
