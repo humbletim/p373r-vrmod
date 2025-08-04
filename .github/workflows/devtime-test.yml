@@ -15,6 +15,10 @@ jobs:
   debug:
     runs-on: windows-latest
     steps:
+      - name: Checkout p373r-vrmod/devtime workspace
+        uses: actions/checkout@v4
+        with:
+          ref: devtime
 
       - name: 'ARTIFACT:'
         id: artifact
