@@ -38,7 +38,7 @@ jobs:
             echo snapshot_dir=${inner_dir}
             echo base=$(basename ${inner_dir})
             echo prefix=${base//[^[:alnum:]]/-}
-          ) | tee -a $GITHUB_ENV _snapshot/GITHUB_ENV
+          ) | tee -a _snapshot/GITHUB_ENV
   
       - name: '/ARTIFACT' 
         if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
@@ -47,9 +47,11 @@ jobs:
             path: _snapshot
             key: ${{ steps.artifact.outputs.cache-primary-key }}
 
-      - name: '  symlink inner dir'
+      - name: '  postprocess _snapshot'
         shell: bash
         run: |
+            . _snapshot/GITHUB_ENV
+            cat _snapshot/GITHUB_ENV | tee -a $GITHUB_ENV
             set -x
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir")
 
