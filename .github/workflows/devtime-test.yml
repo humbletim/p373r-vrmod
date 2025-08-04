@@ -47,7 +47,7 @@ jobs:
       - name: '  symlink inner dir'
         shell: bash
         run: |
-            cmd //c mklink //d $base $snapshot_dir
+            cmd //c mklink //d "$base" "$(cygpath -w $snapshot_dir)"
 
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
