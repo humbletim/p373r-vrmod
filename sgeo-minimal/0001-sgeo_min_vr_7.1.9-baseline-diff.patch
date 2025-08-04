@@ -1,19 +1,18 @@
---- llviewerdisplay.cpp	2025-07-31 14:29:21.414480200 -0400
-+++ sgeo-min-llviewerdisplay.cpp	2025-07-31 14:29:01.398451800 -0400
-@@ -80,6 +80,12 @@
+--- fs-7.1.13-devtime-avx2/source/newview/llviewerdisplay.cpp	2025-08-03 12:31:15.000000000 -0400
++++ sgeo-minimal-vrmod.llviewerdisplay.cpp	2025-08-04 02:04:36.556753400 -0400
+@@ -26,6 +26,11 @@
  
- #include "llenvironment.h"
- #include "llperfstats.h"
-+
+ #include "llviewerprecompiledheaders.h"
+ 
 +//################################### P373R ######################################
 +#include "llviewerVR.cpp"
 +llviewerVR gVR;
 +//################################### END P373R ##################################
 +
- // [RLVa:KB] - Checked: 2011-05-22 (RLVa-1.3.1a)
- #include "llvisualeffect.h"
- #include "rlvactions.h"
-@@ -789,6 +795,12 @@
+ #include "llviewerdisplay.h"
+ 
+ #include "fsyspath.h"
+@@ -832,6 +837,12 @@
              gPipeline.toggleRenderType(LLPipeline::RENDER_TYPE_HUD_PARTICLES);
          }
  
@@ -26,7 +25,7 @@
          stop_glerror();
          display_update_camera();
          stop_glerror();
-@@ -1124,7 +1136,29 @@
+@@ -1154,7 +1165,29 @@
          if (!for_snapshot)
          {
              render_ui();
@@ -57,7 +56,7 @@
          }
  
  
-@@ -1669,6 +1703,10 @@
+@@ -1787,6 +1820,10 @@
      gUIProgram.bind();
      gGL.color4f(1, 1, 1, 1);
  
@@ -68,7 +67,7 @@
      // Coordinate axes
      // <FS:Ansariel> gSavedSettings replacement
      //if (gSavedSettings.getBOOL("ShowAxes"))
-@@ -1819,6 +1857,9 @@
+@@ -1939,6 +1976,9 @@
          gViewerWindow->draw();
      }
  
@@ -78,7 +77,7 @@
  
  
      // reset current origin for font rendering, in case of tiling render
-@@ -1904,6 +1945,9 @@
+@@ -2024,6 +2064,9 @@
  
  void display_cleanup()
  {
