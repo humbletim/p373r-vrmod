@@ -1,0 +1,11 @@
+name: 'devtime-test'
+on:
+  workflow_dispatch:
+jobs:
+  debug:
+    runs-on: windows-latest
+    steps:
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
