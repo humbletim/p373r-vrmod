@@ -2,10 +2,47 @@
 name: 'devtime-test'
 on:
   workflow_dispatch:
+    inputs:
+        artifact:
+            type: string
+            required: true
+        key:
+            type: string
 jobs:
   debug:
     runs-on: windows-latest
     steps:
+
+      - name: 'ARTIFACT:'
+        id: artifact
+        uses: actions/cache/restore@v4
+        with:
+        path: _snapshot
+        key: ${{ steps.input.outputs.key }}-${{ inputs.artifact }}-artifact
+ 
+      - name: '  download and unpack artifact'
+        id: ghdl
+        if: steps.artifact.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ inputs.github-token }}
+        run: |
+          gh --repo humbletim/firestorm-gha run download --name ${{inputs.artifact}} --dir _snapshot
+          inner_dir=$(dirname _snapshot/*/llobjs.rsp.in)
+          mv $inner_dir -iv .
+          (
+            echo artifact=${{inputs.artifact}}
+            echo base=$(basename ${inner_dir})
+            echo prefix=${base//[^[:alnum:]]/-}
+          ) | tee -a $GITHUB_ENV _snapshot/GITHUB_ENV
+  
+      - name: '/ARTIFACT' 
+        if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+        path: _snapshot
+        key: ${{ steps.artifact.outputs.cache-primary-key }}
+
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
         with:

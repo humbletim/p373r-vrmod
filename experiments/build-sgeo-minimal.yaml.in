@@ -1,0 +1,15 @@
+version: 0
+roots:
+    - type: file
+      name: ${snapshot_dir}/objs/newview/llviewerdisplay.cpp.obj
+      external-contents: ${vrmod}.llviewerdisplay.cpp.obj
+    - type: file
+      name: llviewerVR.cpp
+      external-contents: ${vrmod_dir}/llviewerVR.cpp
+    - type: file
+      name: llviewerVR.h
+      external-contents: ${vrmod_dir}/llviewerVR.h
+    - type: file
+      name: ${snapshot_dir}/objs/newview/viewerRes.rc.res
+      external-contents: ${vrmod_dir}/viewerRes.rc.res
+
