@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../../openvr/headers/openvr.h"
-#pragma comment(lib, "../../../openvr/lib/win64/openvr_api.lib")
+#include "openvr.h"
+#include "glh/glh_linear.h"
 #include "llhudtext.h"
 #include "llgl.h"
 #include "string.h"
