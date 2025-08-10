@@ -19,11 +19,11 @@ jobs:
         if: false
       - uses: humbletim/firestorm-gha/gha-node20-run@tpv-gha-nunja
         if: false
-      - name: Checkout p373r-vrmod/devtime workspace
+      - name: Checkout p373r-vrmod-devtime workspace
         uses: actions/checkout@v4
         with:
           ref: devtime
-          path: p373r-vrmod
+          path: p373r-vrmod-devtime
 
       - name: 'ARTIFACT:'
         id: artifact

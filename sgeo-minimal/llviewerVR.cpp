@@ -29,6 +29,9 @@
 #define sprintf_s(buffer, buffer_size, stringbuffer, ...) (sprintf(buffer, stringbuffer, __VA_ARGS__))
 #endif
 
+// DebugSettings approach
+#include "llviewerVR.vrmod_settings.c++" // gVrModSettings
+
 //#include <time.h>
 //#include <sys/time.h>
 llviewerVR::llviewerVR()
@@ -562,6 +565,10 @@ void llviewerVR::SetupCameras()
 	m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right);
 	//gM4eyePosRight = ConvertGLHMatrix4ToLLMatrix4(m_mat4eyePosRight);
 	//gM4eyePosRight.invert();
+
+	if (gVrModSettings->cameraAngle != 0.0f) {
+		gSavedSettings.setF32("CameraAngle", gVrModSettings->cameraAngle);
+	}
 }
 
 bool llviewerVR::CreateFrameBuffer(int nWidth, int nHeight, FramebufferDesc &framebufferDesc)
@@ -957,7 +964,6 @@ void llviewerVR::vrDisplay()
 				S32 thirdx = tx / 3;
 				S32 thirdy = ty / 3;
 				
-
 				if (m_MousePos.mX > tx - div8x && m_MousePos.mY < div8y)//up right
 				{
 					m_iZoomIndex = 4;
@@ -996,7 +1002,7 @@ void llviewerVR::vrDisplay()
 				}
 
 				///Zoom in
-				if (m_iZoomIndex == 0)
+				if (m_iZoomIndex == 0 || !gVrModSettings->mousezoom)
 				{
 					bx +=   m_fTextureZoom;
 					by +=   m_fTextureZoom;
@@ -1423,7 +1429,7 @@ void llviewerVR::HandleKeyboard()
 
 void llviewerVR::DrawCursors()
 {
-	if (!m_bVrActive)
+	if (!m_bVrActive || (!gVrModSettings->handlasers && !gVrModSettings->mousecursor))
 		return;
 	gUIProgram.bind();
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -1446,6 +1452,7 @@ void llviewerVR::DrawCursors()
 	WI->getCursorPosition(&mcpos);
 	LLCoordGL mpos = gViewerWindow->getCurrentMouse();
 
+	if (!gVrModSettings->handlasers)
 	for (vr::TrackedDeviceIndex_t unTrackedDevice = vr::k_unTrackedDeviceIndex_Hmd + 1; unTrackedDevice < vr::k_unMaxTrackedDeviceCount; ++unTrackedDevice)
 	{
 		if (gCtrlscreen[unTrackedDevice].mX > -1)
@@ -1456,6 +1463,7 @@ void llviewerVR::DrawCursors()
 
 	}
 
+	if (gVrModSettings->mousecursor)
 	if (gAgentCamera.getCameraMode() != CAMERA_MODE_MOUSELOOK)
 	{
 		LLColor4 cl;
@@ -1491,7 +1499,7 @@ void llviewerVR::RenderControllerAxes()
 	if (gHMD == NULL)
 		return;
 	HandleInput();
-	if (!gHMD->IsInputAvailable() || !m_bVrActive)
+	if (!gHMD->IsInputAvailable() || !m_bVrActive || !gVrModSettings->handcontrollers)
 		return;
 
 	//std::vector<float> vertdataarray;
@@ -1589,6 +1597,7 @@ void llviewerVR::RenderControllerAxes()
 
 
 	
+		if (gVrModSettings->handlasers) {
 		//draw the controller lines in world  ( make tham nicer ;>)
 		LLGLSUIDefault gls_ui;
 		gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
@@ -1605,7 +1614,9 @@ void llviewerVR::RenderControllerAxes()
 		gGL.end();
 		gGL.popMatrix();
 		glEnable(GL_DEPTH_TEST);
+		}
 
+		if (gVrModSettings->handcontrollers) {
 		//EVRControllerAxisType
 		//read the input from the available controllers
 		vr::VRControllerState_t state;
@@ -1767,7 +1778,7 @@ void llviewerVR::RenderControllerAxes()
 				}
 
 			}
-
+		}
 		}
 	}
 	

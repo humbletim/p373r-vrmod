@@ -9,7 +9,7 @@ roots:
     - type: file
       name: llviewerVR.h
       external-contents: ${vrmod_dir}/llviewerVR.h
-    - type: file
-      name: ${snapshot_dir}/objs/newview/viewerRes.rc.res
-      external-contents: ${vrmod_dir}/viewerRes.rc.res
+    # - type: file
+    #   name: ${snapshot_dir}/objs/newview/viewerRes.rc.res
+    #   external-contents: ${vrmod_dir}/viewerRes.rc.res
 
