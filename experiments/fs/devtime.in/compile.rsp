@@ -1,0 +1,5 @@
+    @winsdk/winsdk.rsp @${devtime}/llincludes.rsp @${devtime}/lldefines.rsp
+    -std=c++20
+    -DLL_WINDOWS
+    -isystem${snapshot_dir}/3p/include
+    -isystem${snapshot_dir}/3p/include/apr-1

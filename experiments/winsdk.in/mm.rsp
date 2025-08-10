@@ -1,0 +1,2 @@
+    -D_INCLUDED_AMM -D_INCLUDED_IMM -D_INCLUDED_EMM -D_INCLUDED_NMM -D_INCLUDED_PMM -D_INCLUDED_SMM -D_INCLUDED_TMM -D_INCLUDED_WMM -D_INCLUDED_MM2 -D_MMINTRIN_H_INCLUDED -D_MMINTRIN_H_INCLUDED -D_INCLUDED_INTRIN -D__INTRIN_H_
+    -isystem${_llvm} -include${_llvm}/mmintrin.h -include${_llvm}/xmmintrin.h -include${_llvm}/emmintrin.h -include${_llvm}/adcintrin.h
