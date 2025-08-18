@@ -776,9 +776,43 @@ bool llviewerVR::ProcessVRCamera()
 		InitUI();
 		//m_fNearClip = LLViewerCamera::getInstance()->getNear();
 		//m_fFarClip = LLViewerCamera::getInstance()->getFar();
-		LLViewerCamera::getInstance()->setNear(0.001);
 
-		
+
+		// 
+		// CONTEXT: The stock LLCamera::setNear() method clamps the near clip plane to a minimum
+		// of MIN_NEAR_PLANE (0.1f). For VR, a much smaller value is often necessary to prevent
+		// objects near the user (like the avatar's body) from clipping out of view.
+		//
+		// STRATEGY: Modifying the upstream LLCamera class is not a viable option for this
+		// specialized VR use case. Instead, we employ a "passive" or "outside-in" workaround
+		// by directly manipulating the camera's internal frustum data in memory. This bypasses
+		// the clamping logic in the public setter method. This approach allows us to achieve
+		// the desired effect while maintaining full compatibility with the upstream code,
+		// ensuring our changes persist across future updates without requiring code merges.
+		//
+		// This is a practical example of maintaining a downstream feature set where direct
+		// upstream contributions may not be feasible. -humbletim 2025.08.18
+		if (gVrModSettings->nearClip > 0.0f) // A value > 0 indicates an override is requested.
+		{
+			// A temporary struct to serve as a proxy for the camera's internal frustum data.
+			static struct
+			{
+				F32 mView;
+				F32 mAspect;
+				F32 mNearPlane;
+				F32 mFarPlane;
+			} frustumProxy{};
+
+			// 1. Read the camera's current frustum state into our local proxy struct.
+			LLViewerCamera::getInstance()->writeFrustumToBuffer(reinterpret_cast<char*>(&frustumProxy));
+
+			// 2. Modify the near plane value in our local copy to apply the custom setting.
+			frustumProxy.mNearPlane = gVrModSettings->nearClip;
+
+			// 3. Write the modified data back to the camera object, effectively bypassing
+			//    the clamped LLCamera::setNear() method.
+			LLViewerCamera::getInstance()->readFrustumFromBuffer(reinterpret_cast<const char*>(&frustumProxy));
+		}
 
 		if (!leftEyeDesc.IsReady && !rightEyeDesc.IsReady)//Starting rendering with first (left) eye of stereo rendering
 		{
