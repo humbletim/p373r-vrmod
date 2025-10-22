@@ -13,14 +13,17 @@ if "%vsdevcmd%" == "" (
 
 call "%vsdevcmd%" -no_logo -arch=x64 -host_arch=amd64 > nul
 
-mkdir winsdk
-mkdir winsdk\sdk
-mkdir winsdk\crt
+mkdir winsdk\sdk\lib\um
+mkdir winsdk\sdk\lib\ucrt
+mkdir winsdk\crt\lib
 mklink /D winsdk\sdk\include "%WindowsSdkDir%\Include\%WindowsSDKVersion%"
-mklink /D winsdk\sdk\lib "%WindowsSdkDir%\Lib\%WindowsSDKVersion%"
 mklink /D winsdk\crt\include "%VCToolsInstallDir%\include"
-mklink /D winsdk\crt\lib "%VCToolsInstallDir%\lib"
+mklink /D winsdk\sdk\lib\um\x86_64 "%WindowsSdkDir%\Lib\%WindowsSDKVersion%\um\x64"
+mklink /D winsdk\sdk\lib\ucrt\x86_64 "%WindowsSdkDir%\Lib\%WindowsSDKVersion%\ucrt\x64"
+mklink /D winsdk\crt\lib\x86_64 "%VCToolsInstallDir%\lib\x64"
 
 if not exist winsdk\vfsoverlay.json (
   echo { "version": 0, "roots": [] } > winsdk\vfsoverlay.json
 )
+
+exit /b 0

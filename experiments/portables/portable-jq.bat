@@ -19,6 +19,7 @@ if not exist tmp\jq-%JQ_VER%-windows-amd64.exe (
 )
 
 echo -- Copying tmp\jq-%JQ_VER%-windows-amd64.exe to bin/
+    if not exist bin (mkdir bin)
     copy tmp\jq-%JQ_VER%-windows-amd64.exe bin\jq.exe
 if errorlevel 1 (echo error copying jq && exit /b 1)
 

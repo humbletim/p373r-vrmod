@@ -3,13 +3,14 @@
 set PATH=bin;llvm\bin;pg\bin;pg\usr\bin;pg\mingw64\bin
 set LIB=NUL
 set vrmod=winxtropia-vrmod
-set base=firestorm-7.1.13
-set snapshot_dir=fs-7.1.13-devtime-avx2
+REM set base=firestorm-7.1.13
+REM set snapshot_dir=fs-7.1.13-devtime-avx2
 set devtime=fs-devtime
 set vrmod_dir=p373r-vrmod-devtime/sgeo-minimal
 
 if not exist p373r-vrmod-devtime ( echo missing p373r-vrmod-devtime && exit /b 1)
-if not exist %snapshot_dir% ( echo missing %snapshot_dir% && exit /b 1)
+if not exist %snapshot_dir% ( echo missing snapshot_dir=%snapshot_dir% && exit /b 1)
+if not defined base ( echo missing base= && exit /b 1)
 
 echo -- confirming toolchain isolation 
 echo int main(^){ return 1^; } | llvm\bin\clang++.exe @winsdk/winsdk.rsp -x c++ - -llibcmt -o - -v 2>&1 | grep -Eo "[^""]+Visual Studio[^""]+" && (
@@ -19,7 +20,7 @@ echo int main(^){ return 1^; } | llvm\bin\clang++.exe @winsdk/winsdk.rsp -x c++ 
 
 echo -- patch
 if not exist %vrmod%.llviewerdisplay.cpp (
-  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/0001-sgeo_min_vr_7.1.9-baseline-diff.patch -o %vrmod%.llviewerdisplay.cpp
+  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/20251021-0001-sgeo_min_vr_7.1.9-baseline-diff.patch -o %vrmod%.llviewerdisplay.cpp
   if errorlevel 1 ( echo running patch.exe ec=%errorlevel% && exit /b 25 )
 )
 
