@@ -68,7 +68,7 @@ echo -- creating boot bat
     echo @echo off
     echo set "EXEROOT=%snapshot_dir%\runtime"
     echo set "PATH=%%EXEROOT%%;%%PATH%%"
-    echo %vrmod%.%base%.exe
+    echo %vrmod%.%base%.exe %%*
 ) > %vrmod%.test.bat
 
 echo -- ok, try running %vrmod%.test.bat to launch ./%vrmod%.%base%.exe inplace

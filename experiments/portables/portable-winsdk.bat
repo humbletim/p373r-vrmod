@@ -41,7 +41,7 @@ echo -- downloading SDK components to tmp/ ...
 if errorlevel 1 (echo error invoking xwin winsdk download && exit /b 1)
 
 echo -- unpacking SDK components to %SDKROOT% ...
-  bin\xwin --accept-license -Loff --cache-dir=tmp %MANIFEST_OPT% --crt-version %CRTVER% --sdk-version %SDKVER% splat --output %SDKROOT%
+  bin\xwin --accept-license -Loff --cache-dir=tmp %MANIFEST_OPT% --crt-version %CRTVER% --sdk-version %SDKVER% splat --vfsoverlay --output %SDKROOT%
 if errorlevel 1 (echo error invoking xwin winsdk splat && exit /b 1)
 
 :done

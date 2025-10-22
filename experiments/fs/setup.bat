@@ -1,6 +1,14 @@
 @echo off
 
+REM set snapshot_dir=fs-7.1.13-devtime-avx2
+set devtime=fs-devtime
+
 if not exist p373r-vrmod-devtime ( echo missing p373r-vrmod-devtime && exit /b 1)
+if not exist %snapshot_dir% ( echo missing %snapshot_dir% && exit /b 1)
+
+if DEFINED GITHUB_ACTIONS (
+    call p373r-vrmod-devtime\experiments\winsdk.in\other\vs-emulate-xwin.bat
+)
 
 call p373r-vrmod-devtime\experiments\portables\setup-portables.bat
 
@@ -11,11 +19,7 @@ set _llvm=llvm/lib/clang/19/include
 set winsdk=winsdk
 envsubst.exe < p373r-vrmod-devtime/experiments/winsdk.in/winsdk.rsp > winsdk/winsdk.rsp
 envsubst.exe < p373r-vrmod-devtime/experiments/winsdk.in/mm.rsp > winsdk/mm.rsp
-
-if not exist fs-7.1.13-devtime-avx2 ( echo missing fs-7.1.13-devtime-avx2 && exit /b 1)
-
-set snapshot_dir=fs-7.1.13-devtime-avx2
-set devtime=fs-devtime
+jq.exe -s ".[0] * { roots: (.[0].roots + .[1].roots) }" winsdk/vfsoverlay.json p373r-vrmod-devtime/experiments/winsdk.in/vfsoverlay.extra.json > winsdk/_vfsoverlay.json 
 
 if not exist %devtime% ( mkdir %devtime% )
 

@@ -76,8 +76,8 @@ struct VrModSettings {
         "to experiment and find a useful value."
     };
     LLCachedControl<F32>  nearClip{ gSavedSettings, "vrmod.nearClip", DEFAULTS.at("nearClip").to_number<float>(),
-        "Set to > 0.0 value to configure custom VR mode near clipping threshold.\n\n"
-        "0.001 is a good value to try using.\n\n"
+        "Set to > 0.0 value to configure custom VR mode near clipping threshold.\n"
+        "0.001 is a good value to try using; 0.015 is a good compromise to avoid z-fighting.\n"
         "Note: When VR Mode is active, this setting can be changed live to test the effect of different near clipping thresholds."
     };
 

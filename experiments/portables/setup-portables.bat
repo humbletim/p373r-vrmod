@@ -6,6 +6,9 @@ REM -- humbletim 2025.08.04
 
 set portables=%~dp0
 
+call %portables%\portable-jq.bat
+if errorlevel 1 (echo error provisioning portable-jq && exit /b 1)
+
 call %portables%\portable-winsdk.bat
 if errorlevel 1 (echo error provisioning portable-winsdk && exit /b 1)
 

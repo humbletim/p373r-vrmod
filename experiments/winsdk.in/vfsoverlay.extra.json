@@ -1,0 +1,28 @@
+{
+    "version": 0,
+    "case-sensitive": "true",
+    "overlay-relative": "true",
+    "roots": [
+     {
+        "type": "file",
+        "name": "sdk/lib/um/x86_64/UxTheme.lib",
+        "external-contents": "sdk/lib/um/x86_64/Uxtheme.lib"
+      },
+      {
+        "type": "file",
+        "name": "sdk/lib/um/x86_64/Dbgeng.lib",
+        "external-contents": "sdk/lib/um/x86_64/DbgEng.Lib"
+      },
+     {
+        "type": "file",
+        "name": "sdk/lib/um/x86_64/Shlwapi.lib",
+        "external-contents": "sdk/lib/um/x86_64/ShLwApi.Lib"
+      },
+     {
+        "type": "file",
+        "name": "sdk/lib/um/x86_64/Dwmapi.lib",
+        "external-contents": "sdk/lib/um/x86_64/dwmapi.lib"
+      }
+    ]
+  }
+  

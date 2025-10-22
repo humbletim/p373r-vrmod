@@ -1,5 +1,22 @@
-    -isystem${winsdk}/crt/include -isystem${winsdk}/sdk/include/ucrt -isystem${winsdk}/sdk/include/shared -isystem${winsdk}/sdk/include/um
-    -L${winsdk}/crt/lib/x86_64 -L${winsdk}/sdk/lib/um/x86_64 -L${winsdk}/sdk/lib/ucrt/x86_64
-    -Wno-unused-command-line-argument -Wl,-ignore:4099 -DNOMINMAX -DNDEBUG
-    --target=x86_64-pc-windows-msvc -Wno-msvc-not-found -nostdinc -nostdlib -nodefaultlibs -fuse-ld=lld
-    -fms-runtime-lib=dll -pthread
+-ivfsoverlay ${winsdk}/_vfsoverlay.json
+-Wl,/vfsoverlay:${winsdk}/_vfsoverlay.json
+
+-isystem${winsdk}/crt/include
+-isystem${winsdk}/sdk/include/ucrt
+-isystem${winsdk}/sdk/include/shared
+-isystem${winsdk}/sdk/include/um
+
+-isystemsdk/include/shared
+-isystemsdk/include/um
+
+-L${winsdk}/crt/lib/x86_64
+-L${winsdk}/sdk/lib/um/x86_64
+-L${winsdk}/sdk/lib/ucrt/x86_64
+-Lcrt/lib/x86_64
+-Lsdk/lib/um/x86_64
+-Lsdk/lib/ucrt/x86_64
+
+-Wno-unused-command-line-argument -Wl,-ignore:4099 -DNOMINMAX -DNDEBUG
+--target=x86_64-pc-windows-msvc -Wno-msvc-not-found -nostdinc -nostdlib -nodefaultlibs -fuse-ld=lld
+-fms-runtime-lib=dll -pthread
+
