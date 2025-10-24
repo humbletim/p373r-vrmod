@@ -93,6 +93,12 @@ dir %vrmod%.%base%.exe
 
 for %%i in ("%snapshot_dir%") do (set "snapshot_dir=%%~fi")
 
+echo -- creating %vrmod%.publish.bash
+(
+  echo . /d/a/_actions/humbletim/firestorm-gha/tpv-gha-nunja/gha/gha.upload-artifact.bash
+  echo gha-upload-artifact-fast %vrmod%.%base% %vrmod%.%base%.exe 1 9
+) > %vrmod%.publish.bash
+
 echo -- creating boot bat
 (
     echo @echo off
