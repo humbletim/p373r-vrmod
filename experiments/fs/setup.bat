@@ -2,10 +2,12 @@
 setlocal enabledelayedexpansion
 
 REM set snapshot_dir=fs-7.1.13-devtime-avx2
-set devtime=fs-devtime
+if not "%base:fs-=%" == "%base%" (set devtime=fs-devtime)
+if not "%base:sl-=%" == "%base%" (set devtime=sl-devtime)
 
 if not exist p373r-vrmod-devtime ( echo missing p373r-vrmod-devtime && exit /b 1)
 if not exist %snapshot_dir% ( echo missing %snapshot_dir% && exit /b 1)
+if not defined devtime ( echo missing devtime && exit /b 1)
 
 if DEFINED GITHUB_ACTIONS (
     @call p373r-vrmod-devtime\experiments\winsdk.in\other\vs-emulate-xwin.bat
@@ -53,8 +55,17 @@ if not exist %devtime% ( mkdir %devtime% )
 envsubst.exe < %snapshot_dir%/llobjs.rsp.in > %devtime%/llobjs.rsp
 envsubst.exe < %snapshot_dir%/llincludes.rsp.in > %devtime%/llincludes.rsp
 
-envsubst.exe < %~dp0/devtime.in/compile.rsp > %devtime%/compile.rsp
-envsubst.exe < %~dp0/devtime.in/link.rsp > %devtime%/link.rsp
+envsubst.exe < %~dp0/devtime.in/compile.common.rsp > %devtime%/compile.common.rsp
+envsubst.exe < %~dp0/devtime.in/link.common.rsp > %devtime%/link.common.rsp
+if not "%base:fs-=%" == "%base%" (
+    envsubst.exe < %~dp0/devtime.in/compile.fs.rsp > %devtime%/compile.rsp
+    envsubst.exe < %~dp0/devtime.in/link.fs.rsp > %devtime%/link.rsp
+)
+if not "%base:sl-=%" == "%base%" (
+    envsubst.exe < %~dp0/devtime.in/compile.sl.rsp > %devtime%/compile.rsp
+    envsubst.exe < %~dp0/devtime.in/link.sl.rsp > %devtime%/link.rsp
+)
+
 envsubst.exe < %~dp0/devtime.in/custom-objs.rsp > %devtime%/custom-objs.rsp
 envsubst.exe < %~dp0/devtime.in/application-bin.rsp > %devtime%/application-bin.rsp
 

@@ -1,0 +1,1 @@
+-lhacd -lnd_hacdConvexDecomposition -lnd_pathing -ldiscord-rpc -lglod -lgrowl++

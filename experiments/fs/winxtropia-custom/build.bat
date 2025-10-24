@@ -5,7 +5,10 @@ set LIB=NUL
 set vrmod=winxtropia-vrmod
 REM set base=firestorm-7.1.13
 REM set snapshot_dir=fs-7.1.13-devtime-avx2
-set devtime=fs-devtime
+REM set devtime=fs-devtime
+if not "%base:fs-=%" == "%base%" (set devtime=fs-devtime)
+if not "%base:sl-=%" == "%base%" (set devtime=sl-devtime)
+
 set vrmod_dir=p373r-vrmod-devtime/sgeo-minimal
 
 if not exist p373r-vrmod-devtime ( echo missing p373r-vrmod-devtime && exit /b 1)
@@ -48,7 +51,7 @@ if not exist %vrmod%.vfsoverlay.yaml (
 )
 
 if not exist %devtime%/boost-json-default_resource-instance_.o (
-  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boostboost-json-default_resource-instance_.o
+  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boost-json-default_resource-instance_.o
   llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-filesystem-detail-path_traits-convert.c++ -o %devtime%/boost-filesystem-detail-path_traits-convert.o
   if errorlevel 1 ( echo ec=%errorlevel% && exit /b 25 )
 )
