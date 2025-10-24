@@ -20,7 +20,7 @@ echo int main(^){ return 1^; } | llvm\bin\clang++.exe @winsdk/winsdk.rsp -x c++ 
 
 echo -- patch
 if not exist %vrmod%.llviewerdisplay.cpp (
-  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/20251021-0001-sgeo_min_vr_7.1.9-baseline-diff.patch -o %vrmod%.llviewerdisplay.cpp
+  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/20251021-sgeo_min_vr_7.1.9-baseline-diff.patch -o %vrmod%.llviewerdisplay.cpp
   if errorlevel 1 ( echo running patch.exe ec=%errorlevel% && exit /b 25 )
 )
 
@@ -28,10 +28,13 @@ if not exist %vrmod%.llviewerdisplay.cpp ( echo -- error patching llviewerdispla
 
 echo -- otherstuff
 @REM ------------------------------------------------- 
-if not exist %vrmod%.fsversionvalues.h (
-  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/fsversionvalues.h -i %~dp0/fsversionvalues.h.patch -o %vrmod%.fsversionvalues.h
-  if errorlevel 1 ( echo error running patch.exe ec=%errorlevel% && exit /b 25 )
+if not "%base:fs-=%" == "%base%" (
+  if not exist %vrmod%.fsversionvalues.h (
+    patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/fsversionvalues.h -i %~dp0/fsversionvalues.h.patch -o %vrmod%.fsversionvalues.h
+    if errorlevel 1 ( echo error running patch.exe ec=%errorlevel% && exit /b 25 )
+  )
 )
+
 if not exist %vrmod%.llversioninfo.cpp ( cp -av %snapshot_dir%/source/newview/llversioninfo.cpp %vrmod%.llversioninfo.cpp )
 
 call;
@@ -45,7 +48,8 @@ if not exist %vrmod%.vfsoverlay.yaml (
 )
 
 if not exist %devtime%/boost-json-default_resource-instance_.o (
-  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boost-json-default_resource-instance_.o
+  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boostboost-json-default_resource-instance_.o
+  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-filesystem-detail-path_traits-convert.c++ -o %devtime%/boost-filesystem-detail-path_traits-convert.o
   if errorlevel 1 ( echo ec=%errorlevel% && exit /b 25 )
 )
 

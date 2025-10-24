@@ -1,3 +1,4 @@
+-D__firestorm__
     @winsdk/winsdk.rsp @${devtime}/llincludes.rsp @${snapshot_dir}/lldefines.rsp
     -std=c++20
     -DLL_WINDOWS
