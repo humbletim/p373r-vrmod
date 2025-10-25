@@ -1,1 +1,4 @@
 @${devtime}/link.common.rsp -lhacd -lnd_hacdConvexDecomposition -lnd_pathing -ldiscord-rpc -lglod -lgrowl++
+
+# workaround MSVC <=> Clang boost json 
+@${devtime}/custom-objs.rsp

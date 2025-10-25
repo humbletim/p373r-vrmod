@@ -50,15 +50,15 @@ if not exist %vrmod%.vfsoverlay.yaml (
   envsubst < %~dp0%~n0.yaml.in > %vrmod%.vfsoverlay.yaml
 )
 
-if not exist %devtime%/boost-json-default_resource-instance_.o (
-  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boost-json-default_resource-instance_.o
-  llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-filesystem-detail-path_traits-convert.c++ -o %devtime%/boost-filesystem-detail-path_traits-convert.o
-  if errorlevel 1 ( echo ec=%errorlevel% && exit /b 25 )
-)
+@REM if not exist %devtime%/boost-json-default_resource-instance_.o (
+@REM   llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-json-default_resource-instance_.c++ -o %devtime%/boost-json-default_resource-instance_.o
+@REM   llvm\bin\clang++ @%devtime%/compile.rsp -c %~dp0/../../boost-filesystem-detail-path_traits-convert.c++ -o %devtime%/boost-filesystem-detail-path_traits-convert.o
+@REM   if errorlevel 1 ( echo ec=%errorlevel% && exit /b 25 )
+@REM )
 
 if not exist %vrmod%.vfsoverlay.yaml ( echo -- error generating llvm vfsoverlay && exit /b 30 ) 
 if not exist %vrmod%.llviewerdisplay.cpp ( echo -- missing / failed %vrmod%.llviewerdisplay.cpp && exit /b 32 ) 
-if not exist %devtime%/boost-json-default_resource-instance_.o ( echo -- missing %devtime%/boost-json-default_resource-instance_.o && exit /b 51 ) 
+@REM if not exist %devtime%/boost-json-default_resource-instance_.o ( echo -- missing %devtime%/boost-json-default_resource-instance_.o && exit /b 51 ) 
 
 set "echo_on=echo on&for %%. in (.) do"
 
