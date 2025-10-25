@@ -43,42 +43,14 @@ runs:
         TMATE_PID=$!
         echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
 
-        echo "--- 3.5. WAITING FOR SOCKET FILE ${SOCKET_FILE} ---"
-        SOCKET_EXISTS=0
-        for i in $(seq 1 15); do
-          if [[ -e "${SOCKET_FILE}" ]]; then
-            echo "SUCCESS: Socket file found after $i seconds."
-            SOCKET_EXISTS=1
-            break
-          fi
-          if ! ps -p $TMATE_PID > /dev/null; then
-            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-            echo "Tmate process (PID: $TMATE_PID) DIED before socket was created."
-            echo "Dumping tmate log (${TMATE_LOG}):"
-            cat ${TMATE_LOG} || echo "Log file not found."
-            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            exit 42
-          fi
-          echo "Waiting for socket... ($i/15s)"
-          sleep 1
-        done
-
-        if [[ $SOCKET_EXISTS -eq 0 ]]; then
-          echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-          echo "Tmate process (PID: $TMATE_PID) TIMED OUT after 15 seconds."
-          echo "Dumping tmate log (${TMATE_LOG}):"
-          cat ${TMATE_LOG} || echo "Log file not found."
-          kill $TMATE_PID || echo "Process already dead."
-          echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-          exit 43
-        fi
+        echo "--- 3.5. Polling for tmate-ready (max 15s) ---"
+        timeout 15 tmate -S /tmp/tmate.sock wait tmate-ready
 
         echo "--- 4. Polling for valid SSH string (max 15s) ---"
-        TMATE_SSH=""
-
-        timeout 15 tmate -S /tmp/tmate.sock wait tmate-ready
         TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
+        echo "-------------------------------------"
         echo "SSH: $TMATE_SSH"
+        echo "-------------------------------------"
         echo "Create a file named 'continue' in the repo root to proceed."
 
         echo "--- 5. Waiting for connection or exit signal ---"
