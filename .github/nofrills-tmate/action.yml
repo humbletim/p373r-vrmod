@@ -38,14 +38,13 @@ runs:
           -a ${HOME}/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
-          new-session -d > ${TMATE_LOG} 2>&1 &
+          new-session -d > ${TMATE_LOG} 2>&1 
         
         TMATE_PID=$!
         echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
 
         echo "--- 3.5. Polling for tmate-ready (max 15s) ---"
-        # timeout 15
-        tmate -S ${SOCKET_FILE} wait tmate-ready
+        timeout 15 tmate -S ${SOCKET_FILE} wait tmate-ready
 
         echo "--- 4. Polling for valid SSH string (max 15s) ---"
         TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
