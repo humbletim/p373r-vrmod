@@ -25,7 +25,7 @@ runs:
         pacman -Sy --noconfirm --needed tmate curl jq
 
         which tmate
-        tmate --version
+        tmate -V
         
         echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"
         # Create .ssh dir in MSYS2 home and fetch keys
@@ -38,20 +38,18 @@ runs:
         chmod 600 ~/.ssh/authorized_keys
 
         echo "--- 3. Starting custom tmate session (no status bar) ---"
-        # FIX: Added CHERE_INVOKING=1
-        CHERE_INVOKING=1 tmate -S tmate.sock \
+        tmate -v -S tmate.sock \
           -a ~/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
           new-session -d || exit 41
 
         echo "--- 3.5 waiting on tmate-ready ---"
-        # FIX: Added CHERE_INVOKING=1
-        CHERE_INVOKING=1 tmate -S tmate.sock wait tmate-ready || exit 42
+        tmate -S tmate.sock wait tmate-ready || exit 42
 
         echo "--- 4. Emitting connection string ---"
         # FIX: Added CHERE_INVOKING=1
-        TMATE_SSH=$(CHERE_INVOKING=1 tmate -S tmate.sock display -p '#{tmate_ssh}')
+        TMATE_SSH=$(tmate -S tmate.sock display -p '#{tmate_ssh}')
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
@@ -78,8 +76,7 @@ runs:
 
           # 3. Check for client connection status
           if [[ $CLIENT_CONNECTED -eq 0 ]]; then
-            # FIX: Added CHERE_INVOKING=1
-            CLIENT_COUNT=$(CHERE_INVOKING=1 tmate -S tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
+            CLIENT_COUNT=$(tmate -S tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
             
             if [[ "$CLIENT_COUNT" != "0" ]]; then
               echo "Client connected! Disarming 5-minute idle timeout."
@@ -103,5 +100,4 @@ runs:
         done
 
         echo "--- 6. Cleanup ---"
-        # FIX: Added CHERE_INVOKING=1
-        CHERE_INVOKING=1 tmate -S tmate.sock kill-session || echo "Tmate session already closed."
+        tmate -S tmate.sock kill-session || echo "Tmate session already closed."
