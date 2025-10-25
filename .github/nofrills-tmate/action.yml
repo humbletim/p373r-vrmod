@@ -19,10 +19,12 @@ runs:
         set -e
 
         export PATH=$PATH:/c/msys64/usr/bin
+        export HOME=$PWD
 
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
         pacman -Sy --noconfirm --needed tmate curl jq
 
+        which tmate
         echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"
         # Create .ssh dir in MSYS2 home and fetch keys
         # This replicates 'limit-access-to-actor: true'
