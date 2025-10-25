@@ -1,3 +1,2 @@
-@${devtime}/custom-objs.rsp
 @${devtime}/link.common.rsp
 -lhacd -lnd_hacdConvexDecomposition -lnd_pathing -ldiscord-rpc -lglod -lgrowl++
