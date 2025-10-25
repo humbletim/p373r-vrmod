@@ -65,7 +65,7 @@ jobs:
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
 
       - name: Setup tmate session
-        uses: ./.github/nofrills-tmate
+        uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
         # uses: mxschmitt/action-tmate@v3
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
