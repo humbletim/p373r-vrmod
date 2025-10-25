@@ -34,17 +34,20 @@ runs:
         chmod 600 ~/.ssh/authorized_keys
 
         echo "--- 3. Starting custom tmate session (no status bar) ---"
-        tmate -S /tmp/tmate.sock \
+        # FIX: Added CHERE_INVOKING=1
+        CHERE_INVOKING=1 tmate -S /tmp/tmate.sock \
           -a ~/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
           new-session -d || exit 41
 
         echo "--- 3.5 waiting on tmate-ready ---"
-        tmate -S /tmp/tmate.sock wait tmate-ready || exit 42
+        # FIX: Added CHERE_INVOKING=1
+        CHERE_INVOKING=1 tmate -S /tmp/tmate.sock wait tmate-ready || exit 42
 
         echo "--- 4. Emitting connection string ---"
-        TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
+        # FIX: Added CHERE_INVOKING=1
+        TMATE_SSH=$(CHERE_INVOKING=1 tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
@@ -71,8 +74,8 @@ runs:
 
           # 3. Check for client connection status
           if [[ $CLIENT_CONNECTED -eq 0 ]]; then
-            # --- IDLE TIMEOUT LOGIC ---
-            CLIENT_COUNT=$(tmate -S /tmp/tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
+            # FIX: Added CHERE_INVOKING=1
+            CLIENT_COUNT=$(CHERE_INVOKING=1 tmate -S /tmp/tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
             
             if [[ "$CLIENT_COUNT" != "0" ]]; then
               echo "Client connected! Disarming 5-minute idle timeout."
@@ -96,4 +99,5 @@ runs:
         done
 
         echo "--- 6. Cleanup ---"
-        tmate -S /tmp/tmate.sock kill-session || echo "Tmate session already closed."
+        # FIX: Added CHERE_INVOKING=1
+        CHERE_INVOKING=1 tmate -S /tmp/tmate.sock kill-session || echo "Tmate session already closed."
