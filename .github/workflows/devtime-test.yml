@@ -11,6 +11,9 @@ on:
 
 run-name: devtime-test ${{ inputs.artifact }}
 
+permissions:
+  actions: write
+
 jobs:
   debug:
     runs-on: windows-latest

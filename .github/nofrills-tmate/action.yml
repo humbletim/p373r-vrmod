@@ -55,7 +55,7 @@ runs:
           exit 53
         fi
         echo "-------------------------------------"
-        echo "SSH: $TMATE_SSH"
+        echo "$TMATE_SSH"
         echo "-------------------------------------"
         echo "Create a file named 'continue' in the repo root to proceed."
 
