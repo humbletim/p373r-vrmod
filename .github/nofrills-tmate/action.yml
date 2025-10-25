@@ -21,7 +21,7 @@ runs:
         TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
 
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
-        pacman -Sy --noconfirm --needed tmate curl jq || exit 1
+        pacman -Sy --noconfirm --needed tmate curl jq coreutils || exit 1
         
         which tmate || exit 2
         tmate -V || exit 3
@@ -48,7 +48,7 @@ runs:
 
         echo "--- 4. Polling for valid SSH string (max 15s) ---"
         TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
-        if [[ -z "${TMATE_SSH}" && "${TMATE_SSH}" == "#tmate_ssh" ]]; then
+        if [[ -z "${TMATE_SSH}" || "${TMATE_SSH}" == "#tmate_ssh" ]]; then
           echo "error getting tmate_ssh"
           exit 53
         fi
