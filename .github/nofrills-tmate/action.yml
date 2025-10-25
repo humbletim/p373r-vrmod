@@ -38,8 +38,10 @@ runs:
           -a ~/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
-          new-session -d
-        tmate -S /tmp/tmate.sock wait tmate-ready
+          new-session -d || exit 41
+
+        echo "--- 3.5 waiting on tmate-ready ---"
+        tmate -S /tmp/tmate.sock wait tmate-ready || exit 42
 
         echo "--- 4. Emitting connection string ---"
         TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
