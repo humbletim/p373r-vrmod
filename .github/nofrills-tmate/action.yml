@@ -98,7 +98,7 @@ runs:
             TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
 
             # Check if we got a real, non-empty, non-literal string
-            if [[ -n "${TMATE_SSH}" && "${TMATE_SSH}" != "#{tmate_ssh}" ]]; then
+            if [[ -n "${TMATE_SSH}" && "${TMATE_SSH}" != *tmate_ssh* ]]; then
                 echo "SUCCESS: Got connection string after $ELAPSED seconds."
                 break
             fi
