@@ -82,6 +82,8 @@ runs:
             CURRENT_TIME=$(date +%s)
             ELAPSED=$((CURRENT_TIME - START_POLL))
 
+            tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo ""
+
             if [[ $ELAPSED -gt 15 ]]; then
                 echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
                 echo "TIMED OUT waiting for valid connection string."
