@@ -18,6 +18,8 @@ runs:
         # Exit immediately if a command fails
         set -e
 
+        export PATH=$PATH:/c/msys64/usr/bin
+
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
         pacman -Sy --noconfirm --needed tmate curl jq
 
