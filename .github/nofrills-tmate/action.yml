@@ -43,8 +43,8 @@ runs:
 
         echo "--- 4. Emitting connection string ---"
         TMATE_SSH=$(tmate -S /tmp/tmate.sock display -p '#{tmate_ssh}')
-        echo "::notice::SSH: $TMATE_SSH"
-        echo "::notice::Create a file named 'continue' in the repo root to proceed."
+        echo "SSH: $TMATE_SSH"
+        echo "Create a file named 'continue' in the repo root to proceed."
 
         echo "--- 5. Waiting for connection or exit signal ---"
         TIMEOUT=300 # 5 minutes (300 seconds)
@@ -54,13 +54,13 @@ runs:
         while true; do
           # 1. Check for 'continue' file to exit
           if [[ -f "${GITHUB_WORKSPACE}/continue" ]]; then
-            echo "::notice::Found 'continue' file. Ending tmate session."
+            echo "Found 'continue' file. Ending tmate session."
             break
           fi
 
           # 2. Check if tmate socket is gone (session closed by user)
           if [[ ! -e /tmp/tmate.sock ]]; then
-            echo "::notice::Tmate session ended (socket file gone)."
+            echo "Tmate session ended (socket file gone)."
             break
           fi
 
@@ -73,25 +73,25 @@ runs:
             CLIENT_COUNT=$(tmate -S /tmp/tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
             
             if [[ "$CLIENT_COUNT" != "0" ]]; then
-              echo "::notice::Client connected! Disarming 5-minute idle timeout."
+              echo "Client connected! Disarming 5-minute idle timeout."
               CLIENT_CONNECTED=1
             else
               # No client yet, check for idle timeout
               if [[ $ELAPSED -gt $TIMEOUT ]]; then
-                echo "::notice::Tmate session timed out after 5 minutes (no connection)."
+                echo "Tmate session timed out after 5 minutes (no connection)."
                 break
               else
                 REMAINING=$((TIMEOUT - ELAPSED))
-                echo "::notice::Waiting for client connection ($REMAINING seconds remaining)..."
+                echo "Waiting for client connection ($REMAINING seconds remaining)..."
               fi
             fi
           else
             # --- ACTIVE SESSION LOGIC ---
-            echo "::notice::Client connected. Waiting for session to end (socket to disappear or 'continue' file)..."
+            echo "Client connected. Waiting for session to end (socket to disappear or 'continue' file)..."
           fi
 
           sleep 5
         done
 
         echo "--- 6. Cleanup ---"
-        tmate -S /tmp/tmate.sock kill-session || echo "::notice::Tmate session already closed."
+        tmate -S /tmp/tmate.sock kill-session || echo "Tmate session already closed."
