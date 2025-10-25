@@ -17,7 +17,7 @@ runs:
        run: |
         # DO NOT use 'set -e'. We need to manually control error checking.
 
-        export PATH=$PATH:/c/msys64/usr/bin:/c/Program\ Files/GitHub\ CLI:/c/Program\ Files/Git/bin:/c/Program\ Files/LLVM/bin
+        export PATH=/bin:/usr/bin:/c/msys64/usr/bin:/c/Program\ Files/GitHub\ CLI:/c/Program\ Files/Git/bin:/c/Program\ Files/LLVM/bin:$PATH
         export HOME=${GITHUB_WORKSPACE}
         SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
         TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
