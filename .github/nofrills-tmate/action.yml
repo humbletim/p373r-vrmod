@@ -13,16 +13,16 @@ runs:
     - name: Run Tmate Debug Session
       shell: bash
       run: |
-        # DO NOT use 'set -e' here. We need to manually control error checking.
-        # set -e
+        # DO NOT use 'set -e'. We need to manually control error checking.
 
         export PATH=$PATH:/c/msys64/usr/bin
-        # Use GITHUB_WORKSPACE for explicit paths
         export HOME=${GITHUB_WORKSPACE}
         SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
+        TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
 
-        echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
-        pacman -Sy --noconfirm --needed tmate curl jq || exit 1
+        echo "--- 1. Installing dependencies (tmate, curl, jq, coreutils) ---"
+        # Add coreutils to get the 'timeout' command
+        pacman -Sy --noconfirm --needed tmate curl jq coreutils || exit 1
         
         which tmate || exit 2
         tmate -V || exit 3
@@ -35,67 +35,78 @@ runs:
         chmod 600 ${HOME}/.ssh/authorized_keys || exit 13
 
         echo "--- 3. Forcing tmate to start in background ---"
-        # We will log tmate's noisy daemon output to a file to prevent stdio hangs
-        TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
-        
-        # We run the command with output redirected and in the background (&)
-        # We REMOVED -v, as it's the most likely cause of the hang.
-        # We explicitly redirect stdout/stderr to the log file.
         tmate -S ${SOCKET_FILE} \
           -a ${HOME}/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
           new-session -d > ${TMATE_LOG} 2>&1 &
         
-        # Get the Process ID (PID) of the backgrounded tmate command
         TMATE_PID=$!
         echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
 
         echo "--- 3.5. WAITING FOR SOCKET FILE ${SOCKET_FILE} ---"
-        # This is our new, reliable "wait tmate-ready"
-        # We will wait up to 15 seconds for the socket file to appear.
-        
-        START_WAIT=$(date +%s)
         SOCKET_EXISTS=0
-        
         for i in $(seq 1 15); do
           if [[ -e "${SOCKET_FILE}" ]]; then
             echo "SUCCESS: Socket file found after $i seconds."
             SOCKET_EXISTS=1
             break
           fi
-          
-          # Check if the process died prematurely
           if ! ps -p $TMATE_PID > /dev/null; then
             echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
             echo "Tmate process (PID: $TMATE_PID) DIED before socket was created."
             echo "Dumping tmate log (${TMATE_LOG}):"
-            cat ${TMATE_LOG}
+            cat ${TMATE_LOG} || echo "Log file not found."
             echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            exit 42 # Exit with error
+            exit 42
           fi
-
-          echo "Waiting... ($i/15s)"
+          echo "Waiting for socket... ($i/15s)"
           sleep 1
         done
 
-        # If the loop finished without finding the socket
         if [[ $SOCKET_EXISTS -eq 0 ]]; then
           echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
           echo "Tmate process (PID: $TMATE_PID) TIMED OUT after 15 seconds."
-          echo "Process is still running but never created socket."
           echo "Dumping tmate log (${TMATE_LOG}):"
-          cat ${TMATE_LOG}
-          echo "Killing hung tmate process..."
+          cat ${TMATE_LOG} || echo "Log file not found."
           kill $TMATE_PID || echo "Process already dead."
           echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-          exit 43 # Exit with error
+          exit 43
         fi
 
-        # --- If we get here, tmate is 100% running. ---
+        # --- FIX: NEW STEP 3.6 ---
+        # The socket exists, but we MUST wait for the session to be fully ready.
+        echo "--- 3.6. Waiting for tmate session to be ready (max 10s) ---"
+        # This command blocks until the daemon is ready to serve requests.
+        timeout 10 tmate -S ${SOCKET_FILE} wait tmate-ready
+        
+        if [[ $? -ne 0 ]]; then
+            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+            echo "Tmate 'wait tmate-ready' command failed or timed out after 10s."
+            echo "The tmate daemon is likely hung."
+            echo "Dumping tmate log (${TMATE_LOG}):"
+            cat ${TMATE_LOG} || echo "Log file not found."
+            kill $TMATE_PID || echo "Process already dead."
+            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            exit 44
+        fi
+        echo "Tmate session is fully ready."
+        # --- END FIX ---
 
         echo "--- 4. Emitting connection string ---"
         TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}')
+        
+        # --- FIX: ADDED VALIDATION ---
+        if [[ "${TMATE_SSH}" == "#{tmate_ssh}" || -z "${TMATE_SSH}" ]]; then
+            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+            echo "Failed to get connection string. 'tmate display' returned literal value or empty."
+            echo "Dumping tmate log (${TMATE_LOG}):"
+            cat ${TMATE_LOG} || echo "Log file not found."
+            kill $TMATE_PID || echo "Process already dead."
+            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            exit 45
+        fi
+        
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
@@ -109,8 +120,6 @@ runs:
             echo "Found 'continue' file. Ending tmate session."
             break
           fi
-
-          # Use the explicit socket file path
           if [[ ! -e ${SOCKET_FILE} ]]; then
             echo "Tmate session ended (socket file gone)."
             break
@@ -121,8 +130,15 @@ runs:
 
           if [[ $CLIENT_CONNECTED -eq 0 ]]; then
             CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
+            
+            # --- FIX: VALIDATE CLIENT_COUNT ---
+            if [[ "${CLIENT_COUNT}" == "#{tmate_num_clients}" ]]; then
+                echo "Client count read error, got literal string. Assuming 0."
+                CLIENT_COUNT=0
+            fi
+
             if [[ "$CLIENT_COUNT" != "0" ]]; then
-              echo "Client connected! Disarming 5-minute idle timeout."
+              echo "Client connected! (Count: $CLIENT_COUNT). Disarming 5-minute idle timeout."
               CLIENT_CONNECTED=1
             else
               if [[ $ELAPSED -gt $TIMEOUT ]]; then
