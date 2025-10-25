@@ -73,49 +73,11 @@ runs:
           exit 43
         fi
 
-        # --- FIX: Replaced 'wait-ready' with a robust POLLING loop ---
         echo "--- 4. Polling for valid SSH string (max 15s) ---"
         TMATE_SSH=""
-        START_POLL=$(date +%s)
 
-        while true; do
-            CURRENT_TIME=$(date +%s)
-            ELAPSED=$((CURRENT_TIME - START_POLL))
-
-            tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo ""
-
-            if [[ $ELAPSED -gt 15 ]]; then
-                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-                echo "TIMED OUT waiting for valid connection string."
-                echo "Dumping tmate log (${TMATE_LOG}):"
-                cat ${TMATE_LOG} || echo "Log file not found."
-                kill $TMATE_PID || echo "Process already dead."
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 45
-            fi
-
-            # Try to get the string, ignore errors, allow empty
-            TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
-
-            # Check if we got a real, non-empty, non-literal string
-            if [[ -n "${TMATE_SSH}" && "${TMATE_SSH}" != "#tmate_ssh" ]]; then
-                echo "SUCCESS: Got connection string after $ELAPSED seconds."
-                break
-            fi
-
-            # Check if tmate died
-            if ! ps -p $TMATE_PID > /dev/null; then
-                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-                echo "Tmate process (PID: $TMATE_PID) DIED while polling for SSH string."
-                echo "Dumping tmate log (${TMATE_LOG}):"
-                cat ${TMATE_LOG} || echo "Log file not found."
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 46
-            fi
-            
-            sleep 1
-        done
-
+        timeout 15 tmate -S /tmp/tmate.sock wait tmate-ready
+        TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
@@ -165,4 +127,4 @@ runs:
         done
 
         echo "--- 6. Cleanup ---"
-        tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
+        [[ -e ${SOCKET_FILE} ]] && tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
