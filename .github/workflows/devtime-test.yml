@@ -71,3 +71,11 @@ jobs:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           limit-access-to-actor: true
+
+      - name: Setup fallback tmate session
+        if: failure() 
+        uses: mxschmitt/action-tmate@v3
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
