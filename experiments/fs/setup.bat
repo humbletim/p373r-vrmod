@@ -46,26 +46,29 @@ if NOT DEFINED _llvm (echo error provisioning _llvm && exit /b 1)
 
 REM set _llvm=llvm/lib/clang/19/include
 set winsdk=winsdk
-envsubst.exe < p373r-vrmod-devtime/experiments/winsdk.in/winsdk.rsp > winsdk/winsdk.rsp
-envsubst.exe < p373r-vrmod-devtime/experiments/winsdk.in/mm.rsp > winsdk/mm.rsp
+
+set safeenvsubst=envsubst.exe "$base $snapshot_dir $devtime $winsdk $_llvm"
+
+%safeenvsubst% < p373r-vrmod-devtime/experiments/winsdk.in/winsdk.rsp > winsdk/winsdk.rsp
+%safeenvsubst% < p373r-vrmod-devtime/experiments/winsdk.in/mm.rsp > winsdk/mm.rsp
 jq.exe -s ".[0] * { roots: (.[0].roots + .[1].roots) }" winsdk/vfsoverlay.json p373r-vrmod-devtime/experiments/winsdk.in/vfsoverlay.extra.json > winsdk/_vfsoverlay.json 
 
 if not exist %devtime% ( mkdir %devtime% )
 
-envsubst.exe < %snapshot_dir%/llobjs.rsp.in > %devtime%/llobjs.rsp
-envsubst.exe < %snapshot_dir%/llincludes.rsp.in > %devtime%/llincludes.rsp
+%safeenvsubst% < %snapshot_dir%/llobjs.rsp.in > %devtime%/llobjs.rsp
+%safeenvsubst% < %snapshot_dir%/llincludes.rsp.in > %devtime%/llincludes.rsp
 
-envsubst.exe < %~dp0/devtime.in/compile.common.rsp > %devtime%/compile.common.rsp
-envsubst.exe < %~dp0/devtime.in/link.common.rsp > %devtime%/link.common.rsp
+%safeenvsubst% < %~dp0/devtime.in/compile.common.rsp > %devtime%/compile.common.rsp
+%safeenvsubst% < %~dp0/devtime.in/link.common.rsp > %devtime%/link.common.rsp
 if not "%base:fs-=%" == "%base%" (
-    envsubst.exe < %~dp0/devtime.in/compile.fs.rsp > %devtime%/compile.rsp
-    envsubst.exe < %~dp0/devtime.in/link.fs.rsp > %devtime%/link.rsp
+    %safeenvsubst% < %~dp0/devtime.in/compile.fs.rsp > %devtime%/compile.rsp
+    %safeenvsubst% < %~dp0/devtime.in/link.fs.rsp > %devtime%/link.rsp
 )
 if not "%base:sl-=%" == "%base%" (
-    envsubst.exe < %~dp0/devtime.in/compile.sl.rsp > %devtime%/compile.rsp
-    envsubst.exe < %~dp0/devtime.in/link.sl.rsp > %devtime%/link.rsp
+    %safeenvsubst% < %~dp0/devtime.in/compile.sl.rsp > %devtime%/compile.rsp
+    %safeenvsubst% < %~dp0/devtime.in/link.sl.rsp > %devtime%/link.rsp
 )
 
-@REM envsubst.exe < %~dp0/devtime.in/custom-objs.rsp > %devtime%/custom-objs.rsp
-envsubst.exe < %~dp0/devtime.in/application-bin.rsp > %devtime%/application-bin.rsp
+@REM %safeenvsubst% < %~dp0/devtime.in/custom-objs.rsp > %devtime%/custom-objs.rsp
+%safeenvsubst% < %~dp0/devtime.in/application-bin.rsp > %devtime%/application-bin.rsp
 
