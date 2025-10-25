@@ -1,46 +1,168 @@
-- name: Run Tmate Debug Session  
-  shell: bash  
-  run: |  
-    export PATH=$PATH:/c/msys64/usr/bin  
-    export HOME=${GITHUB_WORKSPACE}  
-    SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock  
-  
-    echo "--- 1. Installing dependencies ---"  
-    pacman -Sy --noconfirm --needed tmate curl jq || exit 1  
-  
-    echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"  
-    mkdir -p ${HOME}/.ssh || exit 11  
-    curl -s -H "Authorization: token ${{ github.token }}" \  
-         "https://api.github.com/users/${{ github.actor }}/keys" | \  
-         jq -r '.[].key' > ${HOME}/.ssh/authorized_keys || exit 12  
-  
-    echo "--- 3. Starting tmate session ---"  
-    # Run synchronously, not backgrounded  
-    tmate -S ${SOCKET_FILE} \  
-      -a ${HOME}/.ssh/authorized_keys \  
-      set-option -g status off \; \  
-      set-option -g default-command "bash" \; \  
-      new-session -d  
-      
-    # Wait for tmate to be ready (critical!)  
-    tmate -S ${SOCKET_FILE} wait tmate-ready  
-  
-    echo "--- 4. Getting connection string ---"  
-    TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}')  
-    echo "SSH: $TMATE_SSH"  
-  
-    echo "--- 5. Waiting for connection or exit signal ---"  
-    while true; do  
-      if [[ -f "${GITHUB_WORKSPACE}/continue" ]]; then  
-        echo "Found 'continue' file. Ending tmate session."  
-        break  
-      fi  
-      if [[ ! -e ${SOCKET_FILE} ]]; then  
-        echo "Tmate session ended (socket file gone)."  
-        break  
-      fi  
-      sleep 5  
-    done  
-  
-    echo "--- 6. Cleanup ---"  
-    tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
+name: 'No-Frills Tmate Session'
+description: 'Starts a minimal tmate debug session for Windows with no status bar.'
+
+inputs:
+  limit-access-to-actor:
+    description: 'Ignored. Access is always limited to the actor.'
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run Tmate Debug Session
+      shell: C:\msys64\usr\bin\bash.exe -l {0}
+      run: |
+        # DO NOT use 'set -e'. We need to manually control error checking.
+
+        export PATH=$PATH:/c/msys64/usr/bin
+        export HOME=${GITHUB_WORKSPACE}
+        SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
+        TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
+
+        echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
+        pacman -Sy --noconfirm --needed tmate curl jq || exit 1
+        
+        which tmate || exit 2
+        tmate -V || exit 3
+
+        echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"
+        mkdir -p ${HOME}/.ssh || exit 11
+        curl -s -H "Authorization: token $GH_TOKEN" \
+             "https://api.github.com/users/${{ github.actor }}/keys" | \
+             jq -r '.[].key' > ${HOME}/.ssh/authorized_keys || exit 12
+        chmod 600 ${HOME}/.ssh/authorized_keys || exit 13
+
+        echo "--- 3. Forcing tmate to start in background ---"
+        tmate -S ${SOCKET_FILE} \
+          -a ${HOME}/.ssh/authorized_keys \
+          set-option -g status off \; \
+          set-option -g default-command "bash" \; \
+          new-session -d > ${TMATE_LOG} 2>&1 &
+        
+        TMATE_PID=$!
+        echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
+
+        echo "--- 3.5. WAITING FOR SOCKET FILE ${SOCKET_FILE} ---"
+        SOCKET_EXISTS=0
+        for i in $(seq 1 15); do
+          if [[ -e "${SOCKET_FILE}" ]]; then
+            echo "SUCCESS: Socket file found after $i seconds."
+            SOCKET_EXISTS=1
+            break
+          fi
+          if ! ps -p $TMATE_PID > /dev/null; then
+            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+            echo "Tmate process (PID: $TMATE_PID) DIED before socket was created."
+            echo "Dumping tmate log (${TMATE_LOG}):"
+            cat ${TMATE_LOG} || echo "Log file not found."
+            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            exit 42
+          fi
+          echo "Waiting for socket... ($i/15s)"
+          sleep 1
+        done
+
+        if [[ $SOCKET_EXISTS -eq 0 ]]; then
+          echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+          echo "Tmate process (PID: $TMATE_PID) TIMED OUT after 15 seconds."
+          echo "Dumping tmate log (${TMATE_LOG}):"
+          cat ${TMATE_LOG} || echo "Log file not found."
+          kill $TMATE_PID || echo "Process already dead."
+          echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+          exit 43
+        fi
+
+        # --- FIX: Replaced 'wait-ready' with a robust POLLING loop ---
+        echo "--- 4. Polling for valid SSH string (max 15s) ---"
+        TMATE_SSH=""
+        START_POLL=$(date +%s)
+
+        while true; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_POLL))
+
+            tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo ""
+
+            if [[ $ELAPSED -gt 15 ]]; then
+                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+                echo "TIMED OUT waiting for valid connection string."
+                echo "Dumping tmate log (${TMATE_LOG}):"
+                cat ${TMATE_LOG} || echo "Log file not found."
+                kill $TMATE_PID || echo "Process already dead."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                exit 45
+            fi
+
+            # Try to get the string, ignore errors, allow empty
+            TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
+
+            # Check if we got a real, non-empty, non-literal string
+            if [[ -n "${TMATE_SSH}" && "${TMATE_SSH}" != "#tmate_ssh" ]]; then
+                echo "SUCCESS: Got connection string after $ELAPSED seconds."
+                break
+            fi
+
+            # Check if tmate died
+            if ! ps -p $TMATE_PID > /dev/null; then
+                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+                echo "Tmate process (PID: $TMATE_PID) DIED while polling for SSH string."
+                echo "Dumping tmate log (${TMATE_LOG}):"
+                cat ${TMATE_LOG} || echo "Log file not found."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                exit 46
+            fi
+            
+            sleep 1
+        done
+
+        echo "SSH: $TMATE_SSH"
+        echo "Create a file named 'continue' in the repo root to proceed."
+
+        echo "--- 5. Waiting for connection or exit signal ---"
+        TIMEOUT=300 # 5 minutes
+        START_TIME=$(date +%s)
+        CLIENT_CONNECTED=0
+
+        while true; do
+          if [[ -f "${GITHUB_WORKSPACE}/continue" ]]; then
+            echo "Found 'continue' file. Ending tmate session."
+            break
+          fi
+          if [[ ! -e ${SOCKET_FILE} ]]; then
+            echo "Tmate session ended (socket file gone)."
+            break
+          fi
+
+          CURRENT_TIME=$(date +%s)
+          ELAPSED=$((CURRENT_TIME - START_TIME))
+
+          if [[ $CLIENT_CONNECTED -eq 0 ]]; then
+            CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo "")
+            
+            # --- FIX: Use REGEX to check if it's a number ---
+            if ! [[ "${CLIENT_COUNT}" =~ ^[0-9]+$ ]]; then
+                echo "Client count read error, got: '${CLIENT_COUNT}'. Assuming 0."
+                CLIENT_COUNT=0
+            fi
+
+            if [[ $CLIENT_COUNT -ne 0 ]]; then # Use numeric comparison
+              echo "Client connected! (Count: $CLIENT_COUNT). Disarming 5-minute idle timeout."
+              CLIENT_CONNECTED=1
+            else
+              if [[ $ELAPSED -gt $TIMEOUT ]]; then
+                echo "Tmate session timed out after 5 minutes (no connection)."
+                break
+              else
+                REMAINING=$((TIMEOUT - ELAPSED))
+                echo "Waiting for client connection ($REMAINING seconds remaining)..."
+              fi
+            fi
+          else
+            echo "Client connected. Waiting for session to end..."
+          fi
+          sleep 5
+        done
+
+        echo "--- 6. Cleanup ---"
+        tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
