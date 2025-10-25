@@ -1,7 +1,6 @@
 name: 'No-Frills Tmate Session'
 description: 'Starts a minimal tmate debug session for Windows with no status bar.'
 
-# This 'inputs' block makes it compatible with the old 'with' block
 inputs:
   limit-access-to-actor:
     description: 'Ignored. Access is always limited to the actor.'
@@ -12,61 +11,107 @@ runs:
   using: "composite"
   steps:
     - name: Run Tmate Debug Session
-      # This is critical: use the MSYS2 bash shell on the Windows runner
       shell: bash
       run: |
-        # Exit immediately if a command fails
-        set -e
+        # DO NOT use 'set -e' here. We need to manually control error checking.
+        # set -e
 
         export PATH=$PATH:/c/msys64/usr/bin
-        export HOME=$PWD
+        # Use GITHUB_WORKSPACE for explicit paths
+        export HOME=${GITHUB_WORKSPACE}
+        SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
 
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
-        pacman -Sy --noconfirm --needed tmate curl jq
-
-        which tmate
-        tmate -V
+        pacman -Sy --noconfirm --needed tmate curl jq || exit 1
         
+        which tmate || exit 2
+        tmate -V || exit 3
+
         echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"
-        # Create .ssh dir in MSYS2 home and fetch keys
-        # This replicates 'limit-access-to-actor: true'
-        # It uses the GH_TOKEN from the calling workflow's 'env' block
-        mkdir -p ~/.ssh
+        mkdir -p ${HOME}/.ssh || exit 11
         curl -s -H "Authorization: token $GH_TOKEN" \
              "https://api.github.com/users/${{ github.actor }}/keys" | \
-             jq -r '.[].key' > ~/.ssh/authorized_keys
-        chmod 600 ~/.ssh/authorized_keys
+             jq -r '.[].key' > ${HOME}/.ssh/authorized_keys || exit 12
+        chmod 600 ${HOME}/.ssh/authorized_keys || exit 13
 
-        echo "--- 3. Starting custom tmate session (no status bar) ---"
-        tmate -v -S tmate.sock \
-          -a ~/.ssh/authorized_keys \
+        echo "--- 3. Forcing tmate to start in background ---"
+        # We will log tmate's noisy daemon output to a file to prevent stdio hangs
+        TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
+        
+        # We run the command with output redirected and in the background (&)
+        # We REMOVED -v, as it's the most likely cause of the hang.
+        # We explicitly redirect stdout/stderr to the log file.
+        tmate -S ${SOCKET_FILE} \
+          -a ${HOME}/.ssh/authorized_keys \
           set-option -g status off \; \
           set-option -g default-command "bash" \; \
-          new-session -d || exit 41
+          new-session -d > ${TMATE_LOG} 2>&1 &
+        
+        # Get the Process ID (PID) of the backgrounded tmate command
+        TMATE_PID=$!
+        echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
 
-        echo "--- 3.5 waiting on tmate-ready ---"
-        tmate -S tmate.sock wait tmate-ready || exit 42
+        echo "--- 3.5. WAITING FOR SOCKET FILE ${SOCKET_FILE} ---"
+        # This is our new, reliable "wait tmate-ready"
+        # We will wait up to 15 seconds for the socket file to appear.
+        
+        START_WAIT=$(date +%s)
+        SOCKET_EXISTS=0
+        
+        for i in $(seq 1 15); do
+          if [[ -e "${SOCKET_FILE}" ]]; then
+            echo "SUCCESS: Socket file found after $i seconds."
+            SOCKET_EXISTS=1
+            break
+          fi
+          
+          # Check if the process died prematurely
+          if ! ps -p $TMATE_PID > /dev/null; then
+            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+            echo "Tmate process (PID: $TMATE_PID) DIED before socket was created."
+            echo "Dumping tmate log (${TMATE_LOG}):"
+            cat ${TMATE_LOG}
+            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            exit 42 # Exit with error
+          fi
+
+          echo "Waiting... ($i/15s)"
+          sleep 1
+        done
+
+        # If the loop finished without finding the socket
+        if [[ $SOCKET_EXISTS -eq 0 ]]; then
+          echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+          echo "Tmate process (PID: $TMATE_PID) TIMED OUT after 15 seconds."
+          echo "Process is still running but never created socket."
+          echo "Dumping tmate log (${TMATE_LOG}):"
+          cat ${TMATE_LOG}
+          echo "Killing hung tmate process..."
+          kill $TMATE_PID || echo "Process already dead."
+          echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+          exit 43 # Exit with error
+        fi
+
+        # --- If we get here, tmate is 100% running. ---
 
         echo "--- 4. Emitting connection string ---"
-        # FIX: Added CHERE_INVOKING=1
-        TMATE_SSH=$(tmate -S tmate.sock display -p '#{tmate_ssh}')
+        TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}')
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
         echo "--- 5. Waiting for connection or exit signal ---"
-        TIMEOUT=300 # 5 minutes (300 seconds)
+        TIMEOUT=300 # 5 minutes
         START_TIME=$(date +%s)
-        CLIENT_CONNECTED=0 # 0 = false, 1 = true
+        CLIENT_CONNECTED=0
 
         while true; do
-          # 1. Check for 'continue' file to exit
           if [[ -f "${GITHUB_WORKSPACE}/continue" ]]; then
             echo "Found 'continue' file. Ending tmate session."
             break
           fi
 
-          # 2. Check if tmate socket is gone (session closed by user)
-          if [[ ! -e tmate.sock ]]; then
+          # Use the explicit socket file path
+          if [[ ! -e ${SOCKET_FILE} ]]; then
             echo "Tmate session ended (socket file gone)."
             break
           fi
@@ -74,15 +119,12 @@ runs:
           CURRENT_TIME=$(date +%s)
           ELAPSED=$((CURRENT_TIME - START_TIME))
 
-          # 3. Check for client connection status
           if [[ $CLIENT_CONNECTED -eq 0 ]]; then
-            CLIENT_COUNT=$(tmate -S tmate.sock display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
-            
+            CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
             if [[ "$CLIENT_COUNT" != "0" ]]; then
               echo "Client connected! Disarming 5-minute idle timeout."
               CLIENT_CONNECTED=1
             else
-              # No client yet, check for idle timeout
               if [[ $ELAPSED -gt $TIMEOUT ]]; then
                 echo "Tmate session timed out after 5 minutes (no connection)."
                 break
@@ -92,12 +134,10 @@ runs:
               fi
             fi
           else
-            # --- ACTIVE SESSION LOGIC ---
-            echo "Client connected. Waiting for session to end (socket to disappear or 'continue' file)..."
+            echo "Client connected. Waiting for session to end..."
           fi
-
           sleep 5
         done
 
         echo "--- 6. Cleanup ---"
-        tmate -S tmate.sock kill-session || echo "Tmate session already closed."
+        tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
