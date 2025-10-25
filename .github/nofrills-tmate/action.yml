@@ -11,17 +11,19 @@ runs:
   using: "composite"
   steps:
     - name: Run Tmate Debug Session
-      shell: C:\msys64\usr\bin\bash.exe -l {0}
-      run: |
+      uses: humbletim/firestorm-gha/gha-node20-run@tpv-gha-nunja
+      with:
+       shell: msys2
+       run: |
         # DO NOT use 'set -e'. We need to manually control error checking.
 
-        export PATH=$PATH:/c/msys64/usr/bin
+        export PATH=$PATH:/c/msys64/usr/bin:/c/Program\ Files/GitHub\ CLI:/c/Program\ Files/Git/bin:/c/Program\ Files/LLVM/bin
         export HOME=${GITHUB_WORKSPACE}
         SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
         TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
 
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
-        pacman -Sy --noconfirm --needed tmate curl jq coreutils || exit 1
+        pacman -Sy --noconfirm --needed tmate curl jq coreutils > /dev/null || exit 1
         
         which tmate || exit 2
         tmate -V || exit 3
@@ -99,7 +101,7 @@ runs:
               fi
             fi
           else
-            echo "Client connected. Waiting for session to end..."
+            echo "Client connected. Waiting for session to end ($ELAPSED elapsed seconds)..."
             sleep 15
           fi
           sleep 5
