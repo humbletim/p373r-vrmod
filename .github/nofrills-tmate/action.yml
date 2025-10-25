@@ -110,7 +110,7 @@ runs:
                 echo "Dumping tmate log (${TMATE_LOG}):"
                 cat ${TMATE_LOG} || echo "Log file not found."
                 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                exit 46
+                # exit 46
             fi
             
             sleep 1
