@@ -20,9 +20,8 @@ runs:
         SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
         TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
 
-        echo "--- 1. Installing dependencies (tmate, curl, jq, coreutils) ---"
-        # Add coreutils to get the 'timeout' command
-        pacman -Sy --noconfirm --needed tmate curl jq coreutils || exit 1
+        echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
+        pacman -Sy --noconfirm --needed tmate curl jq || exit 1
         
         which tmate || exit 2
         tmate -V || exit 3
@@ -74,39 +73,47 @@ runs:
           exit 43
         fi
 
-        # --- FIX: NEW STEP 3.6 ---
-        # The socket exists, but we MUST wait for the session to be fully ready.
-        echo "--- 3.6. Waiting for tmate session to be ready (max 10s) ---"
-        # This command blocks until the daemon is ready to serve requests.
-        timeout 10 tmate -S ${SOCKET_FILE} wait tmate-ready
-        
-        if [[ $? -ne 0 ]]; then
-            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-            echo "Tmate 'wait tmate-ready' command failed or timed out after 10s."
-            echo "The tmate daemon is likely hung."
-            echo "Dumping tmate log (${TMATE_LOG}):"
-            cat ${TMATE_LOG} || echo "Log file not found."
-            kill $TMATE_PID || echo "Process already dead."
-            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            exit 44
-        fi
-        echo "Tmate session is fully ready."
-        # --- END FIX ---
+        # --- FIX: Replaced 'wait-ready' with a robust POLLING loop ---
+        echo "--- 4. Polling for valid SSH string (max 15s) ---"
+        TMATE_SSH=""
+        START_POLL=$(date +%s)
 
-        echo "--- 4. Emitting connection string ---"
-        TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}')
-        
-        # --- FIX: ADDED VALIDATION ---
-        if [[ "${TMATE_SSH}" == "#{tmate_ssh}" || -z "${TMATE_SSH}" ]]; then
-            echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
-            echo "Failed to get connection string. 'tmate display' returned literal value or empty."
-            echo "Dumping tmate log (${TMATE_LOG}):"
-            cat ${TMATE_LOG} || echo "Log file not found."
-            kill $TMATE_PID || echo "Process already dead."
-            echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            exit 45
-        fi
-        
+        while true; do
+            CURRENT_TIME=$(date +%s)
+            ELAPSED=$((CURRENT_TIME - START_POLL))
+
+            if [[ $ELAPSED -gt 15 ]]; then
+                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+                echo "TIMED OUT waiting for valid connection string."
+                echo "Dumping tmate log (${TMATE_LOG}):"
+                cat ${TMATE_LOG} || echo "Log file not found."
+                kill $TMATE_PID || echo "Process already dead."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                exit 45
+            fi
+
+            # Try to get the string, ignore errors, allow empty
+            TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
+
+            # Check if we got a real, non-empty, non-literal string
+            if [[ -n "${TMATE_SSH}" && "${TMATE_SSH}" != "#{tmate_ssh}" ]]; then
+                echo "SUCCESS: Got connection string after $ELAPSED seconds."
+                break
+            fi
+
+            # Check if tmate died
+            if ! ps -p $TMATE_PID > /dev/null; then
+                echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!"
+                echo "Tmate process (PID: $TMATE_PID) DIED while polling for SSH string."
+                echo "Dumping tmate log (${TMATE_LOG}):"
+                cat ${TMATE_LOG} || echo "Log file not found."
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                exit 46
+            fi
+            
+            sleep 1
+        done
+
         echo "SSH: $TMATE_SSH"
         echo "Create a file named 'continue' in the repo root to proceed."
 
@@ -129,15 +136,15 @@ runs:
           ELAPSED=$((CURRENT_TIME - START_TIME))
 
           if [[ $CLIENT_CONNECTED -eq 0 ]]; then
-            CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo 0)
+            CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo "")
             
-            # --- FIX: VALIDATE CLIENT_COUNT ---
-            if [[ "${CLIENT_COUNT}" == "#{tmate_num_clients}" ]]; then
-                echo "Client count read error, got literal string. Assuming 0."
+            # --- FIX: Use REGEX to check if it's a number ---
+            if ! [[ "${CLIENT_COUNT}" =~ ^[0-9]+$ ]]; then
+                echo "Client count read error, got: '${CLIENT_COUNT}'. Assuming 0."
                 CLIENT_COUNT=0
             fi
 
-            if [[ "$CLIENT_COUNT" != "0" ]]; then
+            if [[ $CLIENT_COUNT -ne 0 ]]; then # Use numeric comparison
               echo "Client connected! (Count: $CLIENT_COUNT). Disarming 5-minute idle timeout."
               CLIENT_CONNECTED=1
             else
