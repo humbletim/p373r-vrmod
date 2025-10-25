@@ -36,7 +36,9 @@ runs:
         echo "--- 3. Forcing tmate to start in background ---"
         tmate -S ${SOCKET_FILE} \
           -a ${HOME}/.ssh/authorized_keys \
-          set-option -g status off \; \
+          set-option -g status on \; \
+          set-option -g status-position top \; \
+          set-option -g default-terminal "screen-256color" \; \
           set-option -g default-command "bash" \; \
           new-session -d > ${TMATE_LOG} 2>&1 
         
