@@ -1,5 +1,3 @@
 @${devtime}/link.common.rsp
-
-# workaround wchar_t MSVC _W <=> Clang G symbol manglings 
 -Wl,/ALTERNATENAME:?convert@path_traits@detail@filesystem@boost@@YAXPEBG0AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBV?$codecvt@GDU_Mbstatet@@@6@@Z=?convert@path_traits@detail@filesystem@boost@@YAXPEB_W0AEAV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEBV?$codecvt@_WDU_Mbstatet@@@6@@Z
 -Wl,/ALTERNATENAME:?convert@path_traits@detail@filesystem@boost@@YAXPEBD0AEAV?$basic_string@GU?$char_traits@G@std@@V?$allocator@G@2@@std@@PEBV?$codecvt@GDU_Mbstatet@@@6@@Z=?convert@path_traits@detail@filesystem@boost@@YAXPEBD0AEAV?$basic_string@_WU?$char_traits@_W@std@@V?$allocator@_W@2@@std@@PEBV?$codecvt@_WDU_Mbstatet@@@6@@Z

@@ -66,6 +66,6 @@ if not "%base:sl-=%" == "%base%" (
     envsubst.exe < %~dp0/devtime.in/link.sl.rsp > %devtime%/link.rsp
 )
 
-envsubst.exe < %~dp0/devtime.in/custom-objs.rsp > %devtime%/custom-objs.rsp
+@REM envsubst.exe < %~dp0/devtime.in/custom-objs.rsp > %devtime%/custom-objs.rsp
 envsubst.exe < %~dp0/devtime.in/application-bin.rsp > %devtime%/application-bin.rsp
 
