@@ -25,6 +25,14 @@ jobs:
           ref: devtime
           path: p373r-vrmod-devtime
 
+      - name: Setup tmate session
+        uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
+        # uses: mxschmitt/action-tmate@v3
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+
       - name: 'ARTIFACT:'
         id: artifact
         uses: actions/cache/restore@v4
@@ -63,14 +71,6 @@ jobs:
             cat _snapshot/GITHUB_ENV | tee -a $GITHUB_ENV
             set -x
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
-
-      - name: Setup tmate session
-        uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
-        # uses: mxschmitt/action-tmate@v3
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          limit-access-to-actor: true
 
       - name: Setup fallback tmate session
         if: failure() 
