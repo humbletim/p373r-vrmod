@@ -2,6 +2,10 @@ name: 'No-Frills Tmate Session'
 description: 'Starts a minimal tmate debug session for Windows with no status bar.'
 
 inputs:
+  timeout:
+    description: 'Timeout in seconds AWAITING initial SSH connection.'
+    required: false
+    default: 300
   limit-access-to-actor:
     description: 'Ignored. Access is always limited to the actor.'
     required: false
