@@ -66,7 +66,7 @@ runs:
         echo "Create a file named 'continue' in the repo root to proceed."
 
         echo "--- 5. Waiting for connection or exit signal ---"
-        TIMEOUT=300 # 5 minutes
+        TIMEOUT=${{ inputs.timeout }} # 5 minutes
         START_TIME=$(date +%s)
         CLIENT_CONNECTED=0
 
