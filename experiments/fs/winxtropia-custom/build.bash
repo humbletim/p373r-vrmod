@@ -59,7 +59,8 @@ grep P373R $snapshot_dir/source/newview/llviewerdisplay.cpp >/dev/null && \
 echo "-- otherstuff"
 if [[ "$base" == *fs-* ]]; then
     if [ ! -f "$vrmod.fsversionvalues.h" ]; then
-        patch --merge --ignore-whitespace -p1 "$snapshot_dir/source/fsversionvalues.h" -i "$vrmod_root/fsversionvalues.h.patch" -o "$vrmod.fsversionvalues.h"
+        sed 's/^#define LL_VIEWER_CHANNEL ".*"/#define LL_VIEWER_CHANNEL "Winxtropia-VR-GHA"/' "$snapshot_dir/source/fsversionvalues.h" > "$vrmod.fsversionvalues.h"
+        # patch --merge --ignore-whitespace -p1 "$snapshot_dir/source/fsversionvalues.h" -i "$vrmod_root/fsversionvalues.h.patch" -o "$vrmod.fsversionvalues.h"
     fi
 fi
 

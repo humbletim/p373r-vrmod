@@ -88,7 +88,11 @@ jobs:
         if: always() && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
-            path: winsdk/crt winsdk/sdk winsdk/vfsoverlay.json
+            path: |
+              winsdk/readme.env
+              winsdk/crt
+              winsdk/sdk
+              winsdk/vfsoverlay.json
             key: ${{ steps.winsdk-ubuntu.outputs.cache-primary-key }}
             
       - name: 'ARTIFACT:'

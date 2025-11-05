@@ -22,3 +22,5 @@ test -v GITHUB_ACTIONS && accept=--accept-license
 
 bin/xwin $accept -Loff --cache-dir=tmp --crt-version $CRTVER --sdk-version $SDKVER download
 bin/xwin --accept-license -Loff --cache-dir=tmp --crt-version $CRTVER --sdk-version $SDKVER splat --vfsoverlay --output $SDKROOT
+
+declare -xp XWIN_VER SDKVER CRTVER SDKROOT | tee $SDKROOT/readme.env
