@@ -74,7 +74,11 @@ jobs:
         id: winsdk-ubuntu
         uses: actions/cache/restore@v4
         with:
-            path: winsdk/crt winsdk/sdk winsdk/vfsoverlay.json
+            path: |
+              winsdk/readme.env
+              winsdk/crt
+              winsdk/sdk
+              winsdk/vfsoverlay.json
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
  
       - name: ' ... winsdk-ubuntu'
