@@ -6,17 +6,25 @@ on:
         artifact:
             type: string
             required: true
+        runner:
+          required: true
+          type: choice
+          options:
+            - windows-latest
+            - ubuntu-latest
+            - macos-latest
+          default: windows-latest
         key:
             type: string
 
-run-name: devtime-test ${{ inputs.artifact }}
+run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
 
 permissions:
   actions: write
 
 jobs:
   debug:
-    runs-on: windows-latest
+    runs-on: ${{ inputs.runner }}
     steps:
       - uses: actions/upload-artifact@v4
         if: false
@@ -33,7 +41,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
             path: _snapshot
-            key: ${{ inputs.key }}-${{ inputs.artifact }}-artifact
+            key: ${{ inputs.runner }}-${{ inputs.key }}-${{ inputs.artifact }}-artifact
  
       - name: '  download and unpack artifact'
         id: ghdl
@@ -68,6 +76,7 @@ jobs:
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
 
       - name: Setup no-frills tmate session
+        if: inputs.runner == 'windows-latest'
         uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
