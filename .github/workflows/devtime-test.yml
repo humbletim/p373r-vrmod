@@ -12,6 +12,7 @@ on:
           options:
             - windows-latest
             - ubuntu-latest
+            - ubuntu-slim
             - macos-latest
           default: windows-latest
         key:
