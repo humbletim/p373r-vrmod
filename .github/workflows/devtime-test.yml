@@ -41,6 +41,7 @@ jobs:
         if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
+          sudo apt update -qq
           sudo apt install -y -qq clang-19 lld-19
 
       - name: 'xwin-ubuntu'
