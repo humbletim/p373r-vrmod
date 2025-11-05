@@ -4,9 +4,9 @@ bin/
 llvm.sh
 tmp/
 winsdk/
-fs-devtime/
-sl-devtime/
-llvm/
+fs-*.*/
+sl-*.*/
+llvm
 pg/
 
 # Prerequisites
