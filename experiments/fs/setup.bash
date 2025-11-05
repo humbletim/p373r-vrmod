@@ -1,10 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-if [ -z "${base:-}" ]; then
-    echo "base= unspecified"
-    exit 1
-fi
+fail() { echo "$@" >&2 ; exit 1; }
+test -v base || fail "missing base=[fs-x.y.z|sl-x.y.z]"
+
+test -d $base && snapshot_dir=${snapshot_dir:-$base}
+
+test -v snapshot_dir || fail "missing snapshot_dir=[fs-x.y.z-devtime|sl-x.y.z-devtime|fs-x.y.z-snapshot|etc]"
 
 # Determine devtime from base
 devtime=""
@@ -15,37 +17,31 @@ if [[ "${base}" == *sl-* ]]; then
     devtime=sl-devtime
 fi
 
-if [ -z "$devtime" ]; then
-    echo "could not determine devtime from base=${base}"
-    exit 1
-fi
+test -n "$devtime" || fail "could not determine devtime from base=${base}"
 
 # Pre-flight checks
 if [ ! -d "p373r-vrmod-devtime" ]; then
     if [ -d experiments/winsdk.in ] ; then
        ln -s . p373r-vrmod-devtime
     else
-      echo "missing p373r-vrmod-devtime"
+       fail "missing p373r-vrmod-devtime"
     fi
-    exit 1
 fi
 
-if [ ! -d "$snapshot_dir" ]; then
-    echo "missing $snapshot_dir"
-    exit 1
-fi
+test -d "$snapshot_dir" || fail "missing $snapshot_dir"
 
 # Symlink LLVM
-CLANG_EXE_PATH=$(which clang-19) || true
-if [ -n "$CLANG_EXE_PATH" ]; then
-    echo "clang-19 found at: $CLANG_EXE_PATH"
-    LLVM_DIR=$(dirname "$(dirname "$(readlink -f "$CLANG_EXE_PATH")")")
-    echo "LLVM directory is: $LLVM_DIR"
-    rm -f llvm
-    ln -s "$LLVM_DIR" llvm
-else
-    echo "clang-19 not found in PATH"
-    exit 1
+if [ ! -x llvm/bin/clang ] ; then
+    CLANG_EXE_PATH=$(which clang-19) || true
+    if [ -n "$CLANG_EXE_PATH" ]; then
+        echo "clang-19 found at: $CLANG_EXE_PATH"
+        LLVM_DIR=$(dirname "$(dirname "$(readlink -f "$CLANG_EXE_PATH")")")
+        echo "LLVM directory is: $LLVM_DIR"
+        rm -f llvm
+        ln -s "$LLVM_DIR" llvm
+    else
+        fail "clang-19 not found in PATH"
+    fi
 fi
 
 export PATH="$(pwd)/bin:$(pwd)/llvm/bin:$PATH"
@@ -53,10 +49,7 @@ unset LIB
 
 # Find clang includes
 _llvm=$(find llvm/lib/clang -path '*/include' -type d | head -n 1)
-if [ -z "$_llvm" ]; then
-    echo "error provisioning _llvm"
-    exit 1
-fi
+test -n "$_llvm" || fail "error provisioning _llvm"
 echo "_llvm=$_llvm"
 
 # Set winsdk variable
@@ -67,36 +60,44 @@ if [ ! -f "winsdk/vfsoverlay.json" ]; then
   echo '{ "version": 0, "roots": [] }' > "winsdk/vfsoverlay.json"
 fi
 
+
+experiments=p373r-vrmod-devtime/experiments
+
 # envsubst setup
 export base
 export snapshot_dir
 export devtime
 export winsdk
 export _llvm
-safeenvsubst='envsubst '\''$base $snapshot_dir $devtime $winsdk $_llvm'\'
+safeenvsubst() { envsubst '$base $snapshot_dir $devtime $winsdk $_llvm' ; }
 
 # Generate rsp files
-eval "$safeenvsubst" < p373r-vrmod-devtime/experiments/winsdk.in/winsdk.rsp > winsdk/winsdk.rsp
-eval "$safeenvsubst" < p373r-vrmod-devtime/experiments/winsdk.in/mm.rsp > winsdk/mm.rsp
-jq -s ".[0] * { roots: (.[0].roots + .[1].roots) }" winsdk/vfsoverlay.json p373r-vrmod-devtime/experiments/winsdk.in/vfsoverlay.extra.json > winsdk/_vfsoverlay.json 
+safeenvsubst < ${experiments}/winsdk.in/winsdk.rsp > winsdk/winsdk.rsp
+safeenvsubst < ${experiments}/winsdk.in/mm.rsp > winsdk/mm.rsp
+jq -s ".[0] * { roots: (.[0].roots + .[1].roots) }" ${experiments}/winsdk.in/vfsoverlay.extra.json winsdk/vfsoverlay.json > winsdk/_vfsoverlay.json 
 
 # Create devtime and generate more rsp files
 mkdir -p "$devtime"
-eval "$safeenvsubst" < "$snapshot_dir/llobjs.rsp.in" > "$devtime/llobjs.rsp"
-eval "$safeenvsubst" < "$snapshot_dir/llincludes.rsp.in" > "$devtime/llincludes.rsp"
+safeenvsubst < "$snapshot_dir/llobjs.rsp.in" > "$devtime/llobjs.rsp"
+safeenvsubst < "$snapshot_dir/llincludes.rsp.in" > "$devtime/llincludes.rsp"
 
-eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/compile.common.rsp" > "$devtime/compile.common.rsp"
-eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/link.common.rsp" > "$devtime/link.common.rsp"
+tpl=$experiments/fs/devtime.in
+
+safeenvsubst < "${tpl}/compile.common.rsp" > "$devtime/compile.common.rsp"
+safeenvsubst < "${tpl}/link.common.rsp" > "$devtime/link.common.rsp"
 
 if [[ "$base" == *fs-* ]]; then
-    eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/compile.fs.rsp" > "$devtime/compile.rsp"
-    eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/link.fs.rsp" > "$devtime/link.rsp"
+    safeenvsubst < "${tpl}/compile.fs.rsp" > "$devtime/compile.rsp"
+    safeenvsubst < "${tpl}/link.fs.rsp" > "$devtime/link.rsp"
 fi
 if [[ "$base" == *sl-* ]]; then
-    eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/compile.sl.rsp" > "$devtime/compile.rsp"
-    eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/link.sl.rsp" > "$devtime/link.rsp"
+    safeenvsubst < "${tpl}/compile.sl.rsp" > "$devtime/compile.rsp"
+    safeenvsubst < "${tpl}/link.sl.rsp" > "$devtime/link.rsp"
 fi
 
-eval "$safeenvsubst" < "p373r-vrmod-devtime/experiments/fs/devtime.in/application-bin.rsp" > "$devtime/application-bin.rsp"
+safeenvsubst < "${tpl}/application-bin.rsp" > "$devtime/application-bin.rsp"
+
+#safeenvsubst < "${tpl}/base.sln.in" > "$devtime/debug.sln"
+safeenvsubst < "${tpl}/base.env.in" > "$devtime/env"
 
 echo "setup.bash script created successfully."

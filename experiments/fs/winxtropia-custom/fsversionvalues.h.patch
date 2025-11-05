@@ -1,11 +1,7 @@
---- fsversionvalues.h	2025-03-11 00:05:14.104907900 -0400
-+++ ../snapshot/source/fsversionvalues.h	2025-03-04 23:27:36.000000000 -0500
-@@ -37,7 +37,7 @@
- //         a different format than is already provided there, then add a
- //         function to that file and reference it, rather than building your
+--- winxtropia-vrmod.fsversionvalues.h	2025-11-04 22:29:21.031253174 -0500
++++ fs-7.2.2-preview-avx2/source/fsversionvalues.h	2025-10-30 18:33:46.337435700 -0400
+@@ -39,3 +39,3 @@
  //         own function elsewhere.
--#define LL_VIEWER_CHANNEL "Firestorm-VR-GHA"
-+#define LL_VIEWER_CHANNEL "Winxtropia-VR-GHA"
+-#define LL_VIEWER_CHANNEL "Winxtropia-VR-GHA"
++#define LL_VIEWER_CHANNEL "Firestorm-VR-GHA"
  #define LL_VIEWER_VERSION_MAJOR 7
- #define LL_VIEWER_VERSION_MINOR 1
- #define LL_VIEWER_VERSION_PATCH 12

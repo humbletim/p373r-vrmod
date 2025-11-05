@@ -1,2 +1,2 @@
 @${devtime}/link.common.rsp
--lhacd -lnd_hacdConvexDecomposition -lnd_pathing -ldiscord-rpc -lglod -lgrowl++
+-lhacd -lnd_hacdConvexDecomposition -lnd_Pathing -ldiscord-rpc -lglod -lgrowl++
