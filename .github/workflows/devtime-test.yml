@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update -qq
-          sudo apt install -y -qq clang-19 lld-19
+          sudo apt install -y -qq clang-19 lld-19 gettext-base
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
