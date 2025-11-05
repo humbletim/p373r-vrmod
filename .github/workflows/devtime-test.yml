@@ -40,7 +40,7 @@ jobs:
         if: inputs.runner == 'ubuntu-latest'
         shell: bash
         run: |
-          sudo apt install clang-19 lld-19
+          sudo apt install -y -qq clang-19 lld-19
 
       - name: 'xwin-ubuntu'
         if: inputs.runner == 'ubuntu-latest'
