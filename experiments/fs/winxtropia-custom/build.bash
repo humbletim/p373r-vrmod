@@ -100,4 +100,5 @@ echo "-- done"
 ls -l "$vrmod.$base.exe"
 
 envsubst < "${experiments}/fs/devtime.in/base.sln.in" > "${vrmod}.${base}.debug.sln"
+envsubst < "${experiments}/fs/devtime.in/base.bat.in" > "${vrmod}.${base}.bat"
 
