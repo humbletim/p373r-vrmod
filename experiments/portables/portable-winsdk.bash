@@ -12,7 +12,7 @@ version_lt() {
     [[ "$1" == "$(printf '%s\n%s\n' "$1" "$2" | sort -V | head -n 1)" ]]
 }
 
-if version_lt `bin/xwin --version tool | awk '{print $NF}'` $XWIN_VER ; then
+if test ! -v skipxwincheck && version_lt `bin/xwin --version tool | awk '{print $NF}'` $XWIN_VER ; then
   echo "nope $(bin/xwin --version) != $XWIN_VER" >&2
   exit 1
 fi

@@ -36,6 +36,61 @@ jobs:
           ref: devtime
           path: p373r-vrmod-devtime
 
+      - name: 'apt install clang-19 lld-19'
+        if: inputs.runner == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt install clang-19 lld-19
+
+      - name: 'xwin-ubuntu'
+        if: inputs.runner == 'ubuntu-latest'
+        id: xwin-ubuntu
+        uses: actions/cache/restore@v4
+        with:
+            path: bin/xwin
+            key: ${{ inputs.runner }}-${{ inputs.key }}-xwin
+ 
+      - name: ' ... xwin-ubuntu'
+        id: xwin-ubuntu-fetch
+        if: steps.xwin-ubuntu.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
+          chmod a+x bin/xwin
+  
+      - name: '/xwin-ubuntu' 
+        if: always() && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+            path: bin/xwin
+            key: ${{ steps.xwin-ubuntu.outputs.cache-primary-key }}
+
+      - name: 'winsdk'
+        if: inputs.runner == 'ubuntu-latest'
+        id: winsdk-ubuntu
+        uses: actions/cache/restore@v4
+        with:
+            path: winsdk/crt winsdk/sdk winsdk/vfsoverlay.json
+            key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
+ 
+      - name: ' ... winsdk-ubuntu'
+        id: winsdk-ubuntu-fetch
+        if: steps.winsdk-ubuntu.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          skipxwincheck=1 bash ./p373r-vrmod-devtime/experiments/portables/portable-winsdk.bash
+  
+      - name: '/winsdk-ubuntu' 
+        if: always() && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+            path: winsdk/crt winsdk/sdk winsdk/vfsoverlay.json
+            key: ${{ steps.winsdk-ubuntu.outputs.cache-primary-key }}
+            
       - name: 'ARTIFACT:'
         id: artifact
         uses: actions/cache/restore@v4
