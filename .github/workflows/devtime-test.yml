@@ -38,13 +38,13 @@ jobs:
           path: p373r-vrmod-devtime
 
       - name: 'apt install clang-19 lld-19'
-        if: inputs.runner == 'ubuntu-latest'
+        if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
           sudo apt install -y -qq clang-19 lld-19
 
       - name: 'xwin-ubuntu'
-        if: inputs.runner == 'ubuntu-latest'
+        if: startsWith(inputs.runner, 'ubuntu-')
         id: xwin-ubuntu
         uses: actions/cache/restore@v4
         with:
@@ -69,7 +69,7 @@ jobs:
             key: ${{ steps.xwin-ubuntu.outputs.cache-primary-key }}
 
       - name: 'winsdk'
-        if: inputs.runner == 'ubuntu-latest'
+        if: startsWith(inputs.runner, 'ubuntu-')
         id: winsdk-ubuntu
         uses: actions/cache/restore@v4
         with:
