@@ -99,7 +99,7 @@ jobs:
               winsdk/crt
               winsdk/sdk
               winsdk/vfsoverlay.json
-            key: ${{ steps.winsdk-ubuntu.outputs.cache-primary-key }}
+            key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
             
       - name: 'ARTIFACT:'
         id: artifact
