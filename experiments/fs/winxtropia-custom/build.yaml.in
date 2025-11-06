@@ -2,7 +2,7 @@ version: 0
 roots:
     - type: file
       name: ${snapshot_dir}/objs/newview/llviewerdisplay.cpp.obj
-      external-contents: ${vrmod}.llviewerdisplay.cpp.obj
+      external-contents: build/${vrmod}.llviewerdisplay.cpp.obj
     - type: file
       name: llviewerVR.cpp
       external-contents: ${vrmod_dir}/llviewerVR.cpp
@@ -11,10 +11,10 @@ roots:
       external-contents: ${vrmod_dir}/llviewerVR.h
     - type: file
       name: ${snapshot_dir}/source/fsversionvalues.h
-      external-contents: ${vrmod}.fsversionvalues.h
+      external-contents: build/${vrmod}.fsversionvalues.h
     - type: file
       name: ${snapshot_dir}/objs/newview/llversioninfo.cpp.obj
-      external-contents: ${vrmod}.llversioninfo.cpp.obj
+      external-contents: build/${vrmod}.llversioninfo.cpp.obj
     # - type: file
     #   name: ${snapshot_dir}/objs/newview/res/firestorm_icon.ico
     #   external-contents: ${experiment}/firestorm_icon.ico
