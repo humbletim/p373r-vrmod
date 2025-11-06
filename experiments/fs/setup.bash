@@ -8,6 +8,8 @@ test -d $base && snapshot_dir=${snapshot_dir:-$base}
 
 test -v snapshot_dir || fail "missing snapshot_dir=[fs-x.y.z-devtime|sl-x.y.z-devtime|fs-x.y.z-snapshot|etc]"
 
+which envsubst >/dev/null || fail "missing envsubst -- please install (eg: sudo apt-get install -y gettext)"
+
 # Determine devtime from base
 devtime=""
 if [[ "${base}" == *fs-* ]]; then

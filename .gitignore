@@ -4,10 +4,11 @@ bin/
 llvm.sh
 tmp/
 winsdk/
-fs-*.*/
-sl-*.*/
+fs-*/
+sl-*/
 llvm
 pg/
+build/
 
 # Prerequisites
 *.d

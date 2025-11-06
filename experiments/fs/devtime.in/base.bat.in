@@ -1,8 +1,9 @@
-set base=${base}
-set snapshot_dir=${snapshot_dir}
-set devtime=${devtime}
-set vrmod=${vrmod}
-set EXEROOT=%snapshot_dir%\runtime
-set PATH=%snapshot_dir%\runtime;%PATH%
+@REM set base=${base}
+@REM set snapshot_dir=${snapshot_dir}
+@REM set devtime=${devtime}
+@REM set vrmod=${vrmod}
+@REM set EXEROOT=%snapshot_dir%\runtime
+@REM set PATH=%snapshot_dir%\runtime;%PATH%
 
+cd ${snapshot_dir}\runtime
 %vrmod%.%base%.exe %*
