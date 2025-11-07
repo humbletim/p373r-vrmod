@@ -77,7 +77,12 @@ if [ ! -f "build/$vrmod.vfsoverlay.yaml" ]; then
     ${python3} ${experiments}/vfstool.py merge build/$vrmod.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
 fi
 
-test -f "build/$vrmod.vfsoverlay.yaml" || fail "-- error generating llvm vfsoverlay"
+if [ ! -f "build/vfsoverlay.yaml" ]; then
+    python3=$(which python3 || which python)
+    ${python3} ${experiments}/vfstool.py merge build/$vrmod.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
+fi
+
+test -f "build/vfsoverlay.yaml" || fail "-- error generating llvm vfsoverlay"
 
 cp -av $vrmod_root/placeholder-icon.ico build/
 bash fs-devtime/env $vrmod_root/cosmetics.bash 
