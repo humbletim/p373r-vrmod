@@ -15,6 +15,9 @@ roots:
     - type: file
       name: ${snapshot_dir}/objs/newview/llversioninfo.cpp.obj
       external-contents: build/${vrmod}.llversioninfo.cpp.obj
+    - type: file
+      name: ${snapshot_dir}/objs/newview/viewerRes.rc.res
+      external-contents: build/viewerRes.rc.res
     # - type: file
     #   name: ${snapshot_dir}/objs/newview/res/firestorm_icon.ico
     #   external-contents: ${experiment}/firestorm_icon.ico
