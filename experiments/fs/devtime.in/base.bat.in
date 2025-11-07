@@ -6,4 +6,4 @@
 @REM set PATH=%snapshot_dir%\runtime;%PATH%
 
 cd ${snapshot_dir}\runtime
-%vrmod%.%base%.exe %*
+..\..\%vrmod%.%base%.exe %*

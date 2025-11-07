@@ -73,6 +73,7 @@ fi
 echo "-- vfsoverlay"
 if [ ! -f "build/$vrmod.vfsoverlay.yaml" ]; then
     envsubst < "$vrmod_root/build.yaml.in" > "build/$vrmod.vfsoverlay.yaml"
+    python ${experiments}/vfstool.py merge build/$vrmod.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
 fi
 
 test -f "build/$vrmod.vfsoverlay.yaml" || fail "-- error generating llvm vfsoverlay"
@@ -82,18 +83,18 @@ test -f "build/$vrmod.llviewerdisplay.cpp" || fail "-- missing / failed build/$v
 
 echo "-- compile custom"
 if [ ! -f "build/$vrmod.llversioninfo.cpp.obj" ]; then
-    llvm/bin/clang++ -w @"$devtime/compile.rsp" @winsdk/mm.rsp -vfsoverlay "build/$vrmod.vfsoverlay.yaml" -Ibuild/ -I"$vrmod_dir" -I"$snapshot_dir/source" "build/$vrmod.llversioninfo.cpp" -c -o "build/$vrmod.llversioninfo.cpp.obj"
+    llvm/bin/clang++ -w @"$devtime/compile.rsp" @winsdk/mm.rsp -vfsoverlay build/vfsoverlay.yml -Ibuild/ -I"$vrmod_dir" -I"$snapshot_dir/source" "build/$vrmod.llversioninfo.cpp" -c -o "build/$vrmod.llversioninfo.cpp.obj"
 fi
 
 echo "-- compile modified llviewerdisplay.cpp"
 if [ ! -f "build/$vrmod.llviewerdisplay.cpp.obj" ]; then
-    llvm/bin/clang++ -w @"$devtime/compile.rsp" @winsdk/mm.rsp -vfsoverlay "build/$vrmod.vfsoverlay.yaml" -Ibuild/ -I"$vrmod_dir" "build/$vrmod.llviewerdisplay.cpp" -c -o "build/$vrmod.llviewerdisplay.cpp.obj"
+    llvm/bin/clang++ -w @"$devtime/compile.rsp" @winsdk/mm.rsp -vfsoverlay build/vfsoverlay.yml -Ibuild/ -I"$vrmod_dir" "build/$vrmod.llviewerdisplay.cpp" -c -o "build/$vrmod.llviewerdisplay.cpp.obj"
 fi
 
 test -f "build/$vrmod.llviewerdisplay.cpp.obj" || fail "-- missing / failed build/$vrmod.llviewerdisplay.cpp.obj"
 
 echo "-- link $vrmod.$base"
-llvm/bin/clang++ @"$devtime/application-bin.rsp" -vfsoverlay "build/$vrmod.vfsoverlay.yaml" -Wl,/vfsoverlay:build/$vrmod.vfsoverlay.yaml -o "build/$vrmod.$base.exe"
+llvm/bin/clang++ @"$devtime/application-bin.rsp" -vfsoverlay build/vfsoverlay.yml -Wl,/vfsoverlay:build/vfsoverlay.yml -o "build/$vrmod.$base.exe"
 
 test -f "build/$vrmod.$base.exe" || fail "-- error compiling application "
 
@@ -103,4 +104,19 @@ ls -l "build/$vrmod.$base.exe"
 
 envsubst < "${experiments}/fs/devtime.in/base.sln.in" > "build/${vrmod}.${base}.debug.sln"
 envsubst < "${experiments}/fs/devtime.in/base.bat.in" > "build/${vrmod}.${base}.bat"
+
+echo "-- creating build/$vrmod.publish.bash"
+(
+  echo . ./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash
+  echo gha-upload-artifact-fast $vrmod.$base build/$vrmod.$base.exe 1 9 true
+) > build/$vrmod.publish.bash
+
+echo -- creating boot bash
+(
+    echo export "EXEROOT=$(readlink -f $snapshot_dir)/runtime"
+    echo export "WINEPATH=\$EXEROOT"
+    echo wine build/$vrmod.$base.exe "\$@"
+) > build/$vrmod.test.bash
+
+echo -- ok, try running build/$vrmod.test.bash to launch build/$vrmod.$base.exe inplace using Wine emulation
 

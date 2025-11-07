@@ -17,6 +17,11 @@ on:
           default: windows-latest
         key:
             type: string
+        command:
+            type: string
+        screenshot:
+            type: boolean
+            default: false
 
 run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
 
@@ -37,12 +42,12 @@ jobs:
           ref: devtime
           path: p373r-vrmod-devtime
 
-      - name: 'apt install clang-19 lld-19'
+      - name: 'apt install clang-19 lld-19 python3-yaml'
         if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
           sudo apt update -qq
-          sudo apt install -y -qq clang-19 lld-19 gettext-base
+          sudo apt install -y -qq clang-19 lld-19 gettext-base python3-yaml
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
@@ -146,6 +151,7 @@ jobs:
             cat _snapshot/GITHUB_ENV | tee -a $GITHUB_ENV
             set -x
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
+            ${{inputs.command}}
 
       - name: Setup no-frills tmate session
         if: inputs.runner == 'windows-latest'
