@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update -qq
-          sudo apt install -y -qq clang-19 lld-19 gettext-base python3-yaml
+          sudo apt install -y -qq clang-19 lld-19 gettext-base python3-yaml file
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
