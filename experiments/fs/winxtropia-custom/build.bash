@@ -73,13 +73,14 @@ fi
 echo "-- vfsoverlay"
 if [ ! -f "build/$vrmod.vfsoverlay.yaml" ]; then
     envsubst < "$vrmod_root/build.yaml.in" > "build/$vrmod.vfsoverlay.yaml"
-    python ${experiments}/vfstool.py merge build/$vrmod.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
+    python3=$(which python3 || which python)
+    ${python3} ${experiments}/vfstool.py merge build/$vrmod.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
 fi
 
 test -f "build/$vrmod.vfsoverlay.yaml" || fail "-- error generating llvm vfsoverlay"
 
-cp -av $vrmod_dir/placeholder-icon.ico build/
-bash fs-devtime/env $vrmod_dir/cosmetics.bash 
+cp -av $vrmod_root/placeholder-icon.ico build/
+bash fs-devtime/env $vrmod_root/cosmetics.bash 
 
 test -f "build/$vrmod.llviewerdisplay.cpp" || fail "-- missing / failed build/$vrmod.llviewerdisplay.cpp"
 
