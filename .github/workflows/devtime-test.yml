@@ -54,7 +54,7 @@ jobs:
  
       - name: ' ... xwin-ubuntu'
         id: xwin-ubuntu-fetch
-        if: steps.xwin-ubuntu.outputs.cache-hit != 'true'
+        if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true'
         shell: bash
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,7 +63,7 @@ jobs:
           chmod a+x bin/xwin
   
       - name: '/xwin-ubuntu' 
-        if: always() && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
+        if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
             path: bin/xwin
@@ -83,7 +83,7 @@ jobs:
  
       - name: ' ... winsdk-ubuntu'
         id: winsdk-ubuntu-fetch
-        if: steps.winsdk-ubuntu.outputs.cache-hit != 'true'
+        if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true'
         shell: bash
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
           skipxwincheck=1 bash ./p373r-vrmod-devtime/experiments/portables/portable-winsdk.bash
   
       - name: '/winsdk-ubuntu' 
-        if: always() && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
+        if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
             path: |
@@ -101,6 +101,13 @@ jobs:
               winsdk/vfsoverlay.json
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
             
+      - name: ' ... winsdk-windows'
+        id: winsdk-windows-emulate
+        if: startsWith(inputs.runner, 'windows-')
+        shell: bash
+        run: |
+          ./p373r-vrmod-devtime/experiments/winsdk.in/other/vs-emulate-xwin.bat
+
       - name: 'ARTIFACT:'
         id: artifact
         uses: actions/cache/restore@v4
