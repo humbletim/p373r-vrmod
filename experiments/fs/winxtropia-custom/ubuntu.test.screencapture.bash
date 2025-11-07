@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+set -m # <--- ADD THIS (Monitor Mode)
 
 # This function will be called on script EXIT (normal or error)
 cleanup() {
@@ -13,17 +14,40 @@ cleanup() {
     # We use "|| true" to prevent the script from exiting with an error
     # if the process is already dead (e.g., it crashed).
 
+    # --- Stage 1: Polite SIGTERM ---
     if [[ -v VIEWER_PID ]]; then
-        echo "Cleaning up background viewer process group $VIEWER_PID..."
+        echo "Cleaning up background viewer process group $VIEWER_PID (TERM)..."
         # Kill the entire process group headed by bash -c
         kill -TERM -"$VIEWER_PID" 2>/dev/null || true
     fi
 
     if [[ -v XVFB_PID ]]; then
-        echo "Cleaning up background Xvfb process group $XVFB_PID..."
+        echo "Cleaning up background Xvfb process group $XVFB_PID (TERM)..."
         # Kill the entire process group headed by nohup
         kill -TERM -"$XVFB_PID" 2>/dev/null || true
     fi
+
+    sleep 0.5 # Give them a moment to die
+
+    ps -eo pid,ppid,pgid,cmd --forest | grep -E "Xvfb|winxtropia|wine|bash" || true
+    # --- Stage 2: Brutal SIGKILL ---
+    # This handles any process ignoring SIGTERM
+    if [[ -v VIEWER_PID ]]; then
+        echo "Ensuring viewer group $VIEWER_PID is gone (KILL)..."
+        kill -KILL -"$VIEWER_PID" 2>/dev/null || true
+    fi
+
+    if [[ -v XVFB_PID ]]; then
+        echo "Ensuring Xvfb group $XVFB_PID is gone (KILL)..."
+        kill -KILL -"$XVFB_PID" 2>/dev/null || true
+    fi
+
+    # --- Stage 3: Hunt the detached daemons ---
+    # This kills the wineserver, winedevice, etc. that have PPID 1
+    echo "Hunting for any detached wine processes..."
+    pkill -f "wineserver" 2>/dev/null || true
+    pkill -f "winedevice.exe" 2>/dev/null || true
+    pkill -f "winxtropia-vrmod" 2>/dev/null || true
 
     echo "Cleanup complete."
 }
@@ -56,11 +80,17 @@ else
 fi
 
 export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
-
+export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
+export WINEPATH=$EXEROOT
+export WINEDEBUG=-all
+export WINEDLLOVERRIDES="winedbg.exe=d"
 echo "Starting background viewer..."
 # bash -c also starts a new process group. $! gives us the PID of bash,
 # which is also the PGID for itself and all its children (wine, .exe).
-bash -c 'set -x ; cd "$0" && DISPLAY=:99 nohup wine "$1"' "$snapshot_dir/runtime" "$EXE" > wine.log & VIEWER_PID=$!
+#
+# !!! REMOVED 'nohup' from inside this string !!!
+#
+bash -c 'set -x ; export DISPLAY=:99 ; cd "$0" && fluxbox & wine "$1" -set FSShowWhitelistReminder 0 -set FirstLoginThisInstall 0' "$EXEROOT" "$EXE" > wine.log 2>&1 & VIEWER_PID=$!
 sleep 1.0 # Give it a moment
 
 if ps -p $VIEWER_PID >/dev/null; then
@@ -71,11 +101,24 @@ else
 fi
 
 echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting 20 seconds for app to load..."
-sleep 20
 
-echo "Attempting to capture screenshot..."
-# Note: Added -display :99 to convert, just in case
-if convert xwd:/tmp/Xvfb_screen0 screencapture.jpg; then
+# This command will:
+# 1. Tail the log files.
+# 2. Grep for *all* lines containing "STATE_" (for general logging).
+# 3. Use 'tee' to print those "STATE_" lines to stderr (so you see them in the CI log).
+# 4. Pass those same lines to a *second* grep, which blocks until it sees "STATE_LOGIN_WAIT" (the readiness signal).
+# 5. The 'grep -m 1' will exit with success (0) as soon as it finds the line, ending the 'timeout'.
+# 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after 20 seconds.
+# 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
+timeout 20 bash -c 'set -x ; tail -F ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
+sleep 1
+
+echo "App is either ready or 20s have passed. Attempting to capture screenshot..."
+
+#DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
+#DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
+
+if DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture.jpg ; then
     echo "Screenshot captured successfully:"
     ls -lrth screencapture.jpg
 else

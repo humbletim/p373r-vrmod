@@ -54,6 +54,7 @@ echo -- vfsoverlay
 
 if not exist build/%vrmod%.vfsoverlay.yaml (
   envsubst < %~dp0%~n0.yaml.in > build/%vrmod%.vfsoverlay.yaml
+  python %experiments%/vfstool.py merge build/%vrmod%.vfsoverlay.yaml winsdk/_vfsoverlay.json -o build/vfsoverlay.yml
 )
 
 @REM if not exist %devtime%/boost-json-default_resource-instance_.o (
@@ -88,7 +89,7 @@ if not exist build/%vrmod%.vfsoverlay.yaml ( echo -- error generating llvm vfsov
 echo -- link build/%vrmod%.%base%.exe
 
 @echo on
-llvm\bin\clang++.exe @%devtime%/application-bin.rsp -vfsoverlay build/%vrmod%.vfsoverlay.yaml -Wl,/vfsoverlay:build/%vrmod%.vfsoverlay.yaml -o build/%vrmod%.%base%.exe || ( echo error linking ec=%errorlevel% && exit /b 64 )
+llvm\bin\clang++.exe @%devtime%/application-bin.rsp -vfsoverlay build/vfsoverlay.yaml -Wl,/vfsoverlay:build/vfsoverlay.yaml -o build/%vrmod%.%base%.exe || ( echo error linking ec=%errorlevel% && exit /b 64 )
 @echo off
 
 if not exist build/%vrmod%.%base%.exe ( echo -- error compiling application .exe && exit /b 44 ) 
@@ -97,12 +98,15 @@ echo -- done
 
 dir build/%vrmod%.%base%.exe
 
+envsubst < "%experiments%/fs/devtime.in/base.sln.in" > "build/%vrmod%.%base%.debug.sln"
+envsubst < "%experiments%/fs/devtime.in/base.bat.in" > "build/%vrmod%.%base%.bat"
+
 for %%i in ("%snapshot_dir%") do (set "snapshot_dir=%%~fi")
 
 echo -- creating build/%vrmod%.publish.bash
 (
-  echo . /d/a/_actions/humbletim/firestorm-gha/tpv-gha-nunja/gha/gha.upload-artifact.bash
-  echo gha-upload-artifact-fast %vrmod%.%base% build/%vrmod%.%base%.exe 1 9
+  echo . ./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash
+  echo gha-upload-artifact-fast %vrmod%.%base% build/%vrmod%.%base%.exe 1 9 true
 ) > build/%vrmod%.publish.bash
 
 echo -- creating boot bat
