@@ -24,9 +24,13 @@ echo int main(^){ return 1^; } | llvm\bin\clang++.exe @winsdk/winsdk.rsp -x c++ 
 )
 
 echo -- patch
-if not exist build/%vrmod%.llviewerdisplay.cpp (
-  patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/20251021-sgeo_min_vr_7.1.9-baseline-diff.patch -o build/%vrmod%.llviewerdisplay.cpp
-  if errorlevel 1 ( echo running patch.exe ec=%errorlevel% && exit /b 25 )
+grep P373R %snapshot_dir%/source/newview/llviewerdisplay.cpp > NUL && (
+  type "%snapshot_dir%/source/newview\llviewerdisplay.cpp" > "build/%vrmod%.llviewerdisplay.cpp"
+ ) || (
+  if not exist build/%vrmod%.llviewerdisplay.cpp (
+    patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/newview/llviewerdisplay.cpp -i %vrmod_dir%/20251021-sgeo_min_vr_7.1.9-baseline-diff.patch -o build/%vrmod%.llviewerdisplay.cpp
+    if errorlevel 1 ( echo running patch.exe ec=%errorlevel% && exit /b 25 )
+  )
 )
 
 if not exist build/%vrmod%.llviewerdisplay.cpp ( echo -- error patching llviewerdisplay.cpp && exit /b 15 ) 
@@ -35,7 +39,7 @@ echo -- otherstuff
 @REM ------------------------------------------------- 
 if not "%base:fs-=%" == "%base%" (
   if not exist build/%vrmod%.fsversionvalues.h (
-    patch --merge --ignore-whitespace -p1 %snapshot_dir%/source/fsversionvalues.h -i %~dp0/fsversionvalues.h.patch -o build/%vrmod%.fsversionvalues.h
+    C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -Command "(Get-Content '%snapshot_dir%/source/fsversionvalues.h') -replace '^#define LL_VIEWER_CHANNEL \".*\"', '#define LL_VIEWER_CHANNEL \"Winxtropia-VR-GHA\"' | Set-Content 'build/%vrmod%.fsversionvalues.h'"
     if errorlevel 1 ( echo error running patch.exe ec=%errorlevel% && exit /b 25 )
   )
 )
@@ -84,7 +88,7 @@ if not exist build/%vrmod%.vfsoverlay.yaml ( echo -- error generating llvm vfsov
 echo -- link build/%vrmod%.%base%.exe
 
 @echo on
-llvm\bin\clang++.exe @%devtime%/application-bin.rsp -vfsoverlay build/%vrmod%.vfsoverlay.yaml -o build/%vrmod%.%base%.exe || ( echo error linking ec=%errorlevel% && exit /b 64 )
+llvm\bin\clang++.exe @%devtime%/application-bin.rsp -vfsoverlay build/%vrmod%.vfsoverlay.yaml -Wl,/vfsoverlay:build/%vrmod%.vfsoverlay.yaml -o build/%vrmod%.%base%.exe || ( echo error linking ec=%errorlevel% && exit /b 64 )
 @echo off
 
 if not exist build/%vrmod%.%base%.exe ( echo -- error compiling application .exe && exit /b 44 ) 

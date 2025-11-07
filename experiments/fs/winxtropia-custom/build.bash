@@ -93,7 +93,7 @@ fi
 test -f "build/$vrmod.llviewerdisplay.cpp.obj" || fail "-- missing / failed build/$vrmod.llviewerdisplay.cpp.obj"
 
 echo "-- link $vrmod.$base"
-llvm/bin/clang++ @"$devtime/application-bin.rsp" -vfsoverlay "build/$vrmod.vfsoverlay.yaml" -o "build/$vrmod.$base.exe"
+llvm/bin/clang++ @"$devtime/application-bin.rsp" -vfsoverlay "build/$vrmod.vfsoverlay.yaml" -Wl,/vfsoverlay:build/$vrmod.vfsoverlay.yaml -o "build/$vrmod.$base.exe"
 
 test -f "build/$vrmod.$base.exe" || fail "-- error compiling application "
 
