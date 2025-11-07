@@ -100,7 +100,8 @@ else
     exit 22
 fi
 
-echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting 20 seconds for app to load..."
+N=60
+echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting $N seconds for app to load..."
 
 # This command will:
 # 1. Tail the log files.
@@ -108,12 +109,16 @@ echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting 20 seconds for ap
 # 3. Use 'tee' to print those "STATE_" lines to stderr (so you see them in the CI log).
 # 4. Pass those same lines to a *second* grep, which blocks until it sees "STATE_LOGIN_WAIT" (the readiness signal).
 # 5. The 'grep -m 1' will exit with success (0) as soon as it finds the line, ending the 'timeout'.
-# 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after 20 seconds.
+# 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after $N seconds.
 # 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
-timeout 20 bash -c 'set -x ; tail -F ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
+rm -vf ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log
+
+timeout $N bash -c 'set -x ; tail -F ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
 sleep 1
 
-echo "App is either ready or 20s have passed. Attempting to capture screenshot..."
+grep STATE_LOGIN_WAIT ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log
+
+echo "App is either ready or $N have passed. Attempting to capture screenshot..."
 
 #DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
 #DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
