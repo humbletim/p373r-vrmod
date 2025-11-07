@@ -1,2 +1,3 @@
 @${devtime}/link.common.rsp
 -lhacd -lnd_hacdConvexDecomposition -lnd_Pathing -ldiscord-rpc -lglod -lgrowl++
+-Wl,'/alternatename:?instance_@default_resource@detail@json@boost@@0V1234@A=?instance_@default_resource@detail@json@boost@@0Tholder@1234@A'
