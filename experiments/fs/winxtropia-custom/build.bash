@@ -77,7 +77,12 @@ if [ ! -f "build/$vrmod.vfsoverlay.yaml" ]; then
 fi
 
 test -f "build/$vrmod.vfsoverlay.yaml" || fail "-- error generating llvm vfsoverlay"
+
+cp -av $vrmod_dir/placeholder-icon.ico build/
+bash fs-devtime/env $vrmod_dir/cosmetics.bash 
+
 test -f "build/$vrmod.llviewerdisplay.cpp" || fail "-- missing / failed build/$vrmod.llviewerdisplay.cpp"
+
 
 #set -x
 
