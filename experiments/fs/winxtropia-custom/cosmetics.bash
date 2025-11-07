@@ -23,4 +23,4 @@ sed -E "$(echo '
   llvm/bin/clang @fs-devtime/compile.rsp -vfsoverlay build/vfsoverlay.yml -x c++ -E - -I$snapshot_dir/source/newview/res | \
   llvm/bin/llvm-rc -c1252 -I$snapshot_dir/source/newview/res -Fobuild/viewerRes.rc.res -
 
-ls -l build/icon.ico build/viewerRes* 
+ls -l build/placeholder-icon.ico build/viewerRes* 
