@@ -16,7 +16,7 @@ cleanup() {
     echo "Cleaning up..."
     kill -TERM -"$VIEWER_PID" 2>/dev/null || true
     sleep 0.25
-    ps -eo pid,ppid,pgid,cmd --forest | grep -E "Xvfb|winxtropia|wine|bash" || true
+    ps -eo pid,ppid,pgid,cmd --forest | grep -E "Xvfb|winxtropia|wine|[.]exe" || true
     kill -KILL -"$VIEWER_PID" 2>/dev/null || true
     # This kills the wineserver, winedevice, etc. that have PPID 1
     echo "Hunting for any detached wine processes..."
@@ -82,12 +82,12 @@ export WINEPREFIX="$PWD/build/steamuser/.wine"
     export WINEDEBUG=-all
     export WINEDLLOVERRIDES="winedbg.exe=d"
 
-    set -x
-    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox & wine $EXE $EXE_OPTS " 
+    # set -x
+    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox 2>&1 > flux.log & wine $EXE $EXE_OPTS 2>&1 > wine.log " 
 ) & VIEWER_PID=$!
 
-echo HOME=$HOME
-sleep 2
+# echo HOME=$HOME
+# sleep 2
 
 sleep 1.0 # Give it a moment
 
@@ -117,7 +117,7 @@ export xAppData=$WINEPREFIX/drive_c/users/steamuser/AppData
 # touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs/SecondLife.log
 # truncate -s 0 $AppData/Roaming/Firestorm_x64/logs/Firestorm.log
 # truncate -s 0 $AppData/Roaming/SecondLife/logs/SecondLife.log
-timeout $N bash -c 'set -x ; tail -F $xAppData/Roaming/SecondLife/logs/SecondLife.log $xAppData/Roaming/Firestorm_x64/logs/Firestorm.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
+timeout $N bash -c 'tail -F $xAppData/Roaming/SecondLife/logs/SecondLife.log $xAppData/Roaming/Firestorm_x64/logs/Firestorm.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
 sleep 1
 
 OK=$(grep STATE_LOGIN_WAIT $xAppData/Roaming/*/logs/*.log || true)

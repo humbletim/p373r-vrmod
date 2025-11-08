@@ -25,6 +25,9 @@ on:
         screencapture:
             type: boolean
             default: true
+        tmate-followup:
+            type: boolean
+            default: false
 
 run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
 
@@ -196,7 +199,7 @@ jobs:
           limit-access-to-actor: true
 
       - name: Setup fallback tmate session
-        if: always()
+        if: failed() || inputs.tmate-followup
         uses: mxschmitt/action-tmate@v3
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
