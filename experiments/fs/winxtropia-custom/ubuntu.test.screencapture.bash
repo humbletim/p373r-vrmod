@@ -79,6 +79,11 @@ else
     exit 19
 fi
 
+pkill -f .exe || true
+
+export WINEDEBUG=-all
+DISPLAY=:99 build/wine/bin/wine cmd /c echo ok < /dev/null || true
+
 export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
 export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
 export WINEPATH=$EXEROOT
@@ -111,7 +116,6 @@ echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting $N seconds for ap
 # 5. The 'grep -m 1' will exit with success (0) as soon as it finds the line, ending the 'timeout'.
 # 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after $N seconds.
 # 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
-wine cmd /c "echo ok" || true
 AppData=/home/runner/.wine/drive_c/users/steamuser/AppData
 mkdir -pv $AppData/Roaming/Firestorm_x64/logs
 mkdir -pv $AppData/Roaming/SecondLife/logs
