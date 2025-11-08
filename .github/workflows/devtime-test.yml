@@ -39,9 +39,9 @@ jobs:
 
       - name: Output Inputs
         run: |
-          cat <<EOF
+          cat <<<'EOF' | jq -c . | tee inputs.json
           ${{ toJSON(github.event.inputs) }}
-          EOF | jq -c . | tee inputs.json
+          EOF
 
       - name: Checkout p373r-vrmod-devtime workspace
         uses: actions/checkout@v4
