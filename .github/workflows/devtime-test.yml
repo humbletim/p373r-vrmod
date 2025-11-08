@@ -166,11 +166,11 @@ jobs:
             cat _snapshot/GITHUB_ENV | tee -a $GITHUB_ENV
             set -x
             cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
-            bash -x <(
-            cat <<'EOF'
+            cat <<'EOF' | tee command.bash
             ${{inputs.command}}
             EOF
             )
+            bash command.bash
 
       - name: Setup no-frills tmate session
         if: inputs.runner == 'windows-latest'
