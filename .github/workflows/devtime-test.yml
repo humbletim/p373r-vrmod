@@ -201,7 +201,7 @@ jobs:
           bash command.bash || echo nope $?
 
       - name: buildcapture
-        if: inputs.buildcapture && startsWith(inputs.runner, 'ubuntu-')
+        if: inputs.buildcapture
         shell: bash
         run: |
           ./p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.build.bash
