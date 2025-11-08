@@ -62,7 +62,7 @@ jobs:
         shell: bash
         run: |
           sudo apt update -qq -o=Dpkg::Use-Pty=0 2>&1 > /dev/null
-          sudo apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 gettext-base python3-yaml file eatmydata 2>&1 > /dev/null
+          sudo apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 gettext-base python3-yaml file eatmydata nano 2>&1 > /dev/null
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
