@@ -3,24 +3,28 @@ set -euo pipefail
 
 # test ! -v CONTY_WINE || bash conty.bash
 
-which wine || sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' > /dev/null
+if test -v GITHUB_ACTIONS ; then
+    which wine || sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' > /dev/null
+fi
 
 VIEWER_PID=
 # export PATH=$PATH:$PWD/build/wine/bin
 
 # This function will be called on script EXIT (normal or error)
 cleanup() {
+    set +eu
     echo "Cleaning up..."
     kill -TERM -"$VIEWER_PID" 2>/dev/null || true
-    sleep 0.5
+    sleep 0.25
     ps -eo pid,ppid,pgid,cmd --forest | grep -E "Xvfb|winxtropia|wine|bash" || true
     kill -KILL -"$VIEWER_PID" 2>/dev/null || true
-    fi
     # This kills the wineserver, winedevice, etc. that have PPID 1
     echo "Hunting for any detached wine processes..."
-    pkill -f "wineserver" 2>/dev/null || true
-    pkill -f "Xvfb" 2>/dev/null || true
-    pkill -f ".exe" 2>/dev/null || true
+    if test -v GITHUB_ACTIONS ; then
+        pkill -f "wineserver" 2>/dev/null || true
+        pkill -f "Xvfb" 2>/dev/null || true
+        pkill -f ".exe" 2>/dev/null || true
+    fi
     echo "Cleanup complete."
 }
 
@@ -36,10 +40,12 @@ which xvfb-run || { echo 'Error: xvfb-run not found in $PATH.' ; exit 1 ; }
 which convert || { echo 'Error: ImageMagick "convert" not found in $PATH.' ; exit 1 ; }
 which wine || { echo 'Error: "wine" not found in $PATH.' ; exit 1 ; }
 
-sudo pkill -f .exe || true
-sudo pkill -f wine64 || true
-sudo pkill -f xvfb-run || true
-sudo pkill -f Xvfb || true
+    if test -v GITHUB_ACTIONS ; then
+        sudo pkill -f .exe || true
+        sudo pkill -f wine || true
+        sudo pkill -f xvfb-run || true
+        sudo pkill -f Xvfb || true
+    fi
 # rm -rf ~/.wine || true
 #  rm ~/.wine/.update-timestamp || true
 # # # export WINEDEBUG=-all
@@ -54,6 +60,17 @@ set -m # <--- ADD THIS (Monitor Mode)
 export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
 export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
 export WINEPATH=$EXEROOT
+export WINEPREFIX=$PWD/build
+export USER=steamuser
+export HOME="$PWD/build/steamuser"
+mkdir -pv $HOME
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_CACHE_HOME="$HOME/.cache"
+export WINEPREFIX="$HOME/.wine"
+export WINEARCH=win64
+export WINEDEBUG=-all
+
 #export WINEDEBUG=-all
 #export WINEDLLOVERRIDES="winedbg.exe=d"
 echo "Starting background viewer..."
@@ -62,7 +79,9 @@ echo "Starting background viewer..."
 #
 # !!! REMOVED 'nohup' from inside this string !!!
 #
-xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "fluxbox & wine64 $EXE -set FSShowWhitelistReminder 0 -set FirstLoginThisInstall 0 " & VIEWER_PID=$!
+set -x
+export EXE_OPTS='-set FirstLoginThisInstall 0 -nonotifications '
+xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox & wine $EXE $EXE_OPTS " & VIEWER_PID=$!
 sleep 1.0 # Give it a moment
 
 if test -v VIEWER_PID && ps -p $VIEWER_PID >/dev/null; then
@@ -84,17 +103,17 @@ echo "Viewer(pgid ${VIEWER_PID:-})... waiting $N seconds for app to load..."
 # 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after $N seconds.
 # 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
 sleep 1
-AppData=/home/runner/.wine/drive_c/users/runner/AppData
+export xAppData=$WINEPREFIX/drive_c/users/$USER/AppData
 # mkdir -pv $AppData/Roaming/Firestorm_x64/logs
 # mkdir -pv $AppData/Roaming/SecondLife/logs
 # touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs/Firestorm.log
 # touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs/SecondLife.log
 # truncate -s 0 $AppData/Roaming/Firestorm_x64/logs/Firestorm.log
 # truncate -s 0 $AppData/Roaming/SecondLife/logs/SecondLife.log
-timeout $N bash -c 'set -x ; tail -F $AppData/Roaming/SecondLife/logs/SecondLife.log $AppData/Roaming/Firestorm_x64/logs/Firestorm.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
+timeout $N bash -c 'set -x ; tail -F $xAppData/Roaming/SecondLife/logs/SecondLife.log $xAppData/Roaming/Firestorm_x64/logs/Firestorm.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
 sleep 1
 
-grep STATE_LOGIN_WAIT $AppData/Roaming/*/logs/*.log
+grep STATE_LOGIN_WAIT $xAppData/Roaming/*/logs/*.log
 
 echo "App is either ready or $N have passed. Attempting to capture screenshot..."
 
@@ -110,12 +129,12 @@ else
     exit 30
 fi
 
-sleep 1
+sleep 0.5
 # NOTE: We call 'cleanup' here because at this point done with the capture
 cleanup
 
 # Check if the upload script exists
-if [[ -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
+if [[ test -v GITHUB_ACTIONS && -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
     echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
     sleep 5
 
