@@ -44,6 +44,7 @@ jobs:
         uses: crazy-max/ghaction-github-runtime@v3
  
       - name: Output Inputs
+        shell: bash
         run: |
           cat <<'EOF' | jq -c . | tee inputs.json
           ${{ toJSON(github.event.inputs) }}
@@ -69,8 +70,14 @@ jobs:
         if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
+          echo apt update
           sudo apt update -qq -o=Dpkg::Use-Pty=0 2>&1 > /dev/null
-          sudo apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 gettext-base python3-yaml file eatmydata nano 2>&1 > /dev/null
+          echo apt install gettext-base python3-yaml file eatmydata nano
+          sudo apt install -y -qq -o=Dpkg::Use-Pty=0 gettext-base python3-yaml file eatmydata nano 2>&1 > /dev/null
+          which clang-19 || {
+            echo apt install clang-19 lld-19
+            sudo eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 2>&1 > /dev/null
+          }
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
