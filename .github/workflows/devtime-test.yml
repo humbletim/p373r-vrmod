@@ -31,6 +31,13 @@ on:
 
 run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  TZ: America/New_York
+
 permissions:
   actions: write
 
@@ -60,6 +67,7 @@ jobs:
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
+        shell: bash
         run: |
           echo "::notice title=inputs::$(jq -c . inputs.json)"
           echo "::notice title=mini-report::$(for id in `ls -1d p373r-vrmod-devtime 2>/dev/null` ; do
