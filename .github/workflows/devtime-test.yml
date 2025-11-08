@@ -39,7 +39,7 @@ jobs:
 
       - name: Output Inputs
         run: |
-          cat <<<'EOF' | jq -c . | tee inputs.json
+          cat <<'EOF' | jq -c . | tee inputs.json
           ${{ toJSON(github.event.inputs) }}
           EOF
 
