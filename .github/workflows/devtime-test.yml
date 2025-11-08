@@ -19,9 +19,12 @@ on:
             type: string
         command:
             type: string
-        screenshot:
+        buildcapture:
             type: boolean
-            default: false
+            default: true
+        screencapture:
+            type: boolean
+            default: true
 
 run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
 
@@ -34,9 +37,9 @@ jobs:
     steps:
       - uses: actions/upload-artifact@v4
         if: false
-      # - uses: humbletim/firestorm-gha/gha-node20-run@tpv-gha-nunja
-      #   if: inputs.runner == 'windows-latest'
-
+      - name: Expose GitHub Runtime environment variables
+        uses: crazy-max/ghaction-github-runtime@v3
+ 
       - name: Output Inputs
         run: |
           cat <<'EOF' | jq -c . | tee inputs.json
@@ -170,6 +173,19 @@ jobs:
           ${{inputs.command}}
           EOF
           bash command.bash || echo nope $?
+
+      - name: buildcapture
+        if: inputs.buildcapture && startsWith(inputs.runner, 'ubuntu-')
+        shell: bash
+        run: |
+          ./p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.build.bash
+          bash build/*.publish.bash
+
+      - name: screencapture
+        if: inputs.screencapture && startsWith(inputs.runner, 'ubuntu-')
+        shell: bash
+        run: |
+          bash fs-devtime/env bash p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.screencapture.bash          
 
       - name: Setup no-frills tmate session
         if: inputs.runner == 'windows-latest'
