@@ -39,7 +39,9 @@ jobs:
 
       - name: Output Inputs
         run: |
-          echo "${{ toJSON(github.event.inputs) }}" | tee inputs.json
+          cat <<EOF
+          ${{ toJSON(github.event.inputs) }}
+          EOF | jq -c . | tee inputs.json
 
       - name: Checkout p373r-vrmod-devtime workspace
         uses: actions/checkout@v4
@@ -50,7 +52,7 @@ jobs:
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
         run: |
-          echo "::notice title=inputs::$(echo "${{ toJSON(github.event.inputs) }}"")"
+          echo "::notice title=inputs::$(jq -c . inputs.json)"
           echo "::notice title=mini-report::$(for id in `ls -1d p373r-vrmod-devtime 2>/dev/null` ; do
             echo -n "$(basename $id)=$(git -C $id rev-parse --short HEAD),$(git -C $id rev-list --count HEAD),$(git -C $id describe --all --always | sed 's@heads/@@'); "
           done)"
