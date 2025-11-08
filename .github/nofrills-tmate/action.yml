@@ -34,8 +34,7 @@ runs:
 
         echo "--- 2. Fetching SSH keys for ${{ github.actor }} ---"
         mkdir -p ${HOME}/.ssh || exit 11
-        curl -s -H "Authorization: token $GH_TOKEN" \
-             "https://api.github.com/users/${{ github.actor }}/keys" | \
+        curl -s "https://api.github.com/users/${{ github.actor }}/keys" | \
              jq -r '.[].key' > ${HOME}/.ssh/authorized_keys || exit 12
         chmod 600 ${HOME}/.ssh/authorized_keys || exit 13
 

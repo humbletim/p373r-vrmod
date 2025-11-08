@@ -214,7 +214,7 @@ jobs:
           bash fs-devtime/env bash p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.screencapture.bash
 
       - name: Setup no-frills tmate session
-        if: inputs.runner == 'windows-latest'
+        if: failure() || inputs.tmate-followup && inputs.runner == 'windows-latest'
         uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
