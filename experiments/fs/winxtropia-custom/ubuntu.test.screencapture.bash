@@ -141,8 +141,10 @@ if [[ -n "$OK" ]] ; then
     cleanup
     # Check if the upload script exists
     if [[ -v GITHUB_ACTIONS && -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
-        echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
-        sleep 5
+        if [[ -v INPUT_TMATE ]] ; then
+            echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
+            sleep 5
+        fi
 
         # Source it
         . ./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash

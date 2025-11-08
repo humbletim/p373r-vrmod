@@ -50,10 +50,12 @@ jobs:
           EOF
 
       - name: Checkout p373r-vrmod-devtime workspace
-        uses: actions/checkout@v4
-        with:
-          ref: devtime
-          path: p373r-vrmod-devtime
+        shell: bash
+        run: |
+          git clone --quiet --filter=tree:0 --single-branch \
+            https://github.com/humbletim/p373r-vrmod \
+            --branch devtime p373r-vrmod-devtime \
+          2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
