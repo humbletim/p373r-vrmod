@@ -169,7 +169,7 @@ jobs:
           cat <<'EOF' | tee command.bash
           ${{inputs.command}}
           EOF
-          bash command.bash
+          bash command.bash || echo nope $?
 
       - name: Setup no-frills tmate session
         if: inputs.runner == 'windows-latest'
