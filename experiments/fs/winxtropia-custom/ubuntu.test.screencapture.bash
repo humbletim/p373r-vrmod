@@ -2,6 +2,15 @@
 set -euo pipefail
 set -m # <--- ADD THIS (Monitor Mode)
 
+test -v CONTY_WINE && {
+    echo "installing conty_wine..." >&2
+    sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 xvfb fluxbox imagemagick nano fuse 2>&1 ' > /dev/null
+    mkdir -pv build
+    wget -P build https://github.com/Kron4ek/Conty/releases/download/1.28.3/conty_wine_dwarfs.sh
+    bash -c 'cd build && chmod a+x conty_wine_dwarfs.sh && ./conty_wine_dwarfs.sh -e && ln -s conty_wine_dwarfs.sh_files wine'
+    ./build/wine/bin/wine --version
+}
+
 # This function will be called on script EXIT (normal or error)
 cleanup() {
     echo "Cleaning up..."
@@ -80,9 +89,9 @@ else
 fi
 
 pkill -f .exe || true
-
 export WINEDEBUG=-all
-DISPLAY=:99 build/wine/bin/wine cmd /c echo ok < /dev/null || true
+DISPLAY=:99 timeout 30 build/wine/bin/wine cmd /c echo ok < /dev/null || true
+pkill -f .exe || true
 
 export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
 export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
@@ -95,7 +104,7 @@ echo "Starting background viewer..."
 #
 # !!! REMOVED 'nohup' from inside this string !!!
 #
-bash -c 'set -x ; export DISPLAY=:99 ; cd "$0" && fluxbox & wine "$1" -set FSShowWhitelistReminder 0 -set FirstLoginThisInstall 0' "$EXEROOT" "$EXE" > wine.log 2>&1 & VIEWER_PID=$!
+bash -c 'set -x ; export DISPLAY=:99 ; cd "$0" && fluxbox & build/wine/bin/wine "$1" -set FSShowWhitelistReminder 0 -set FirstLoginThisInstall 0' "$EXEROOT" "$EXE" > wine.log 2>&1 & VIEWER_PID=$!
 sleep 1.0 # Give it a moment
 
 if ps -p $VIEWER_PID >/dev/null; then
