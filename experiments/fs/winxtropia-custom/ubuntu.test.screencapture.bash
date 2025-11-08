@@ -13,6 +13,7 @@ VIEWER_PID=
 
 # This function will be called on script EXIT (normal or error)
 cleanup() {
+    test -n "$VIEWER_PID" || return 0
     set +eu
     echo "Cleaning up..."
     kill -TERM -"$VIEWER_PID" 2>/dev/null || true
@@ -26,6 +27,7 @@ cleanup() {
         pkill -f "Xvfb" 2>/dev/null || true
         pkill -f ".exe" 2>/dev/null || true
     fi
+    VIEWER_PID=
     echo "Cleanup complete."
 }
 
@@ -84,7 +86,7 @@ export WINEPREFIX="$PWD/build/steamuser/.wine"
     export WINEDLLOVERRIDES="winedbg.exe=d"
 
     # set -x
-    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox 2>&1 & wine $EXE $EXE_OPTS 2>&1" 2>&1 > wine.log
+    eatmydata xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox 2>&1 & wine $EXE $EXE_OPTS 2>&1" 2>&1 > wine.log
 ) & VIEWER_PID=$!
 
 # echo HOME=$HOME
@@ -128,7 +130,7 @@ if [[ -n "$OK" ]] ; then
     #DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
     #DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
 
-    if DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture.jpg ; then
+    if convert xwd:/tmp/Xvfb_screen0 screencapture.jpg ; then
         echo "Screenshot captured successfully:"
         ls -lrth screencapture.jpg
     else
@@ -136,6 +138,7 @@ if [[ -n "$OK" ]] ; then
         # Let the script exit; trap will handle cleanup.
         exit 30
     fi
+    cleanup
     # Check if the upload script exists
     if [[ -v GITHUB_ACTIONS && -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
         echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
