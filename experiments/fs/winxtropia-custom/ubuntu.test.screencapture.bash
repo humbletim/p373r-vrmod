@@ -111,10 +111,10 @@ echo "Xvfb(pgid $XVFB_PID) Viewer(pgid $VIEWER_PID)... waiting $N seconds for ap
 # 5. The 'grep -m 1' will exit with success (0) as soon as it finds the line, ending the 'timeout'.
 # 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after $N seconds.
 # 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
-mkdir -pv /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64
-mkdir -pv /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife
-touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs/Firestorm.log
-touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs/SecondLife.log
+mkdir -pv /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs
+mkdir -pv /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs
+# touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs/Firestorm.log
+# touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs/SecondLife.log
 truncate -s 0 /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs/Firestorm.log
 truncate -s 0 /home/runner/.wine/drive_c/users/runner/AppData/Roaming/SecondLife/logs/SecondLife.log
 timeout $N bash -c 'set -x ; tail -F ~/.wine/drive_c/users/runner/AppData/Roaming/*/logs/*.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
