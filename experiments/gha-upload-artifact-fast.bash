@@ -6,7 +6,7 @@
 gha-esc() {( printf "%q" "$@" )}
 gha-upload-artifact-fast() {(
     local name=$1 path=$2 expires=${3:-1} compress=${4:-0} overwrite=${5:-false}
-    set -x;
+    # set -x;
     test -v GITHUB_ACTIONS || return 0;
     set -Euo pipefail;
     export INPUT_NAME="`gha-esc "$name"`";

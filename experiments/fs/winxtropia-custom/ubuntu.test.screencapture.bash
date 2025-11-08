@@ -4,6 +4,7 @@ set -euo pipefail
 # test ! -v CONTY_WINE || bash conty.bash
 
 if ! which wine && test -v GITHUB_ACTIONS ; then
+    echo "installing wine..." >&2
     sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' | grep -i 'install'
 fi
 
@@ -83,7 +84,7 @@ export WINEPREFIX="$PWD/build/steamuser/.wine"
     export WINEDLLOVERRIDES="winedbg.exe=d"
 
     # set -x
-    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox 2>&1 > flux.log & wine $EXE $EXE_OPTS 2>&1 > wine.log " 
+    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox 2>&1 & wine $EXE $EXE_OPTS 2>&1" 2>&1 > wine.log
 ) & VIEWER_PID=$!
 
 # echo HOME=$HOME
