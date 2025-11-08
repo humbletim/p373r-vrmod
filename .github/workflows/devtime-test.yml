@@ -49,7 +49,7 @@ jobs:
         if: false
       - name: Expose GitHub Runtime environment variables
         uses: crazy-max/ghaction-github-runtime@v3
- 
+
       - name: Output Inputs
         shell: bash
         run: |
@@ -74,6 +74,12 @@ jobs:
             echo -n "$(basename $id)=$(git -C $id rev-parse --short HEAD),$(git -C $id rev-list --count HEAD),$(git -C $id describe --all --always | sed 's@heads/@@'); "
           done)"
 
+      - name: 'pip install pyyaml'
+        if: startsWith(inputs.runner, 'windows-')
+        shell: bash
+        run: |
+          pip install pyyaml
+
       - name: 'apt install clang-19 lld-19 python3-yaml'
         if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
@@ -94,7 +100,7 @@ jobs:
         with:
             path: bin/xwin
             key: ${{ inputs.runner }}-${{ inputs.key }}-xwin
- 
+
       - name: ' ... xwin-ubuntu'
         id: xwin-ubuntu-fetch
         if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true'
@@ -104,8 +110,8 @@ jobs:
         run: |
           gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
           chmod a+x bin/xwin
-  
-      - name: '/xwin-ubuntu' 
+
+      - name: '/xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
@@ -123,7 +129,7 @@ jobs:
               winsdk/sdk
               winsdk/vfsoverlay.json
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
- 
+
       - name: ' ... winsdk-ubuntu'
         id: winsdk-ubuntu-fetch
         if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true'
@@ -132,8 +138,8 @@ jobs:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           skipxwincheck=1 bash ./p373r-vrmod-devtime/experiments/portables/portable-winsdk.bash
-  
-      - name: '/winsdk-ubuntu' 
+
+      - name: '/winsdk-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
@@ -143,7 +149,7 @@ jobs:
               winsdk/sdk
               winsdk/vfsoverlay.json
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
-            
+
       - name: ' ... winsdk-windows'
         id: winsdk-windows-emulate
         if: startsWith(inputs.runner, 'windows-')
@@ -157,7 +163,7 @@ jobs:
         with:
             path: _snapshot
             key: ${{ inputs.runner }}-${{ inputs.key }}-${{ inputs.artifact }}-artifact
- 
+
       - name: '  download and unpack artifact'
         id: ghdl
         if: steps.artifact.outputs.cache-hit != 'true'
@@ -174,8 +180,8 @@ jobs:
             echo base=$(basename ${inner_dir})
             echo prefix=${base//[^[:alnum:]]/-}
           ) | tee -a _snapshot/GITHUB_ENV
-  
-      - name: '/ARTIFACT' 
+
+      - name: '/ARTIFACT'
         if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
         uses: actions/cache/save@v4
         with:
@@ -205,7 +211,7 @@ jobs:
         if: inputs.screencapture && startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
-          bash fs-devtime/env bash p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.screencapture.bash          
+          bash fs-devtime/env bash p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.screencapture.bash
 
       - name: Setup no-frills tmate session
         if: inputs.runner == 'windows-latest'

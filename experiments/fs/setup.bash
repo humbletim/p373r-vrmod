@@ -34,15 +34,19 @@ test -d "$snapshot_dir" || fail "missing $snapshot_dir"
 
 # Symlink LLVM
 if [ ! -x llvm/bin/clang ] ; then
-    CLANG_EXE_PATH=$(which clang-19) || true
+    CLANG_EXE_PATH=$(which clang++) || true
     if [ -n "$CLANG_EXE_PATH" ]; then
-        echo "clang-19 found at: $CLANG_EXE_PATH"
+        echo "clang++ found at: $CLANG_EXE_PATH"
         LLVM_DIR=$(dirname "$(dirname "$(readlink -f "$CLANG_EXE_PATH")")")
         echo "LLVM directory is: $LLVM_DIR"
         rm -f llvm
-        ln -s "$LLVM_DIR" llvm
+        if [[ "${RUNNER_OS:-}" == Windows ]] ; then
+            cmd //c "mklink /j \"$(cygpath -wa "$LLVM_DIR")\" llvm"
+        else
+            ln -s "$LLVM_DIR" llvm
+        fi
     else
-        fail "clang-19 not found in PATH"
+        fail "clang++ not found in PATH"
     fi
 fi
 

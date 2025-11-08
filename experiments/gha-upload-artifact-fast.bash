@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# wrapper to invoke actions/upload-artifact from within an actions/tmate debugging ssh session 
+# wrapper to invoke actions/upload-artifact from within an actions/tmate debugging ssh session
 # - humbletim 2025.11.07
 
 gha-esc() {( printf "%q" "$@" )}
@@ -13,10 +13,10 @@ gha-upload-artifact-fast() {(
     export INPUT_PATH="`gha-esc "$path"`";
     local actions=
     case "$OSTYPE" in
-      msys|cygwin) actions=/d/_a/_actions/actions  ;;
+      msys|cygwin) actions=/d/a/_actions/actions  ;;
       *)           actions=~/work/_actions/actions ;;
     esac
-    test -n "$actions" || { echo "OSTYPE=$OSTYPE ???" >&2 ; return 60 ; } 
+    test -n "$actions" || { echo "OSTYPE=$OSTYPE ???" >&2 ; return 60 ; }
     env INPUT_RETENTION-DAYS=${expires} INPUT_COMPRESSION-LEVEL=${compress} INPUT_OVERWRITE=${overwrite} INPUT_INCLUDE-HIDDEN-FILES=true INPUT_IF-NO-FILES-FOUND=error \
         node ${actions}/upload-artifact/v4/dist/upload/index.js || return $?;
     echo "uploaded: ${INPUT_PATH}" 1>&2 )

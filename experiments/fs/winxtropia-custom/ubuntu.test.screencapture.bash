@@ -3,7 +3,9 @@ set -euo pipefail
 
 # test ! -v CONTY_WINE || bash conty.bash
 
-if ! which wine && test -v GITHUB_ACTIONS ; then
+test "${RUNNER_OS:-}" != Windows || { echo "!Windows support yet" ; exit 6 ; }
+
+if test -v GITHUB_ACTIONS && ! which wine ; then
     echo "installing wine..." >&2
     sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' | grep -i 'install'
 fi
@@ -124,8 +126,8 @@ timeout $N bash -c 'tail -F $xAppData/Roaming/SecondLife/logs/SecondLife.log $xA
 sleep 1
 
 OK=$(grep STATE_LOGIN_WAIT $xAppData/Roaming/*/logs/*.log || true)
- 
-if [[ -n "$OK" ]] ; then 
+
+if [[ -n "$OK" ]] ; then
     echo "App reached login screen state!"
     #DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
     #DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
