@@ -3,8 +3,8 @@ set -euo pipefail
 
 # test ! -v CONTY_WINE || bash conty.bash
 
-if test -v GITHUB_ACTIONS ; then
-    which wine || sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' > /dev/null
+if ! which wine && test -v GITHUB_ACTIONS ; then
+    sudo bash -c 'eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 wine-stable xvfb fluxbox imagemagick 2>&1 ' | grep -i 'install'
 fi
 
 VIEWER_PID=
@@ -57,20 +57,6 @@ which wine || { echo 'Error: "wine" not found in $PATH.' ; exit 1 ; }
 
 set -m # <--- ADD THIS (Monitor Mode)
 
-export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
-export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
-export WINEPATH=$EXEROOT
-export WINEPREFIX=$PWD/build
-export USER=steamuser
-export HOME="$PWD/build/steamuser"
-mkdir -pv $HOME
-export XDG_DATA_HOME="$HOME/.local/share"
-export XDG_CONFIG_HOME="$HOME/.config"
-export XDG_CACHE_HOME="$HOME/.cache"
-export WINEPREFIX="$HOME/.wine"
-export WINEARCH=win64
-export WINEDEBUG=-all
-
 #export WINEDEBUG=-all
 #export WINEDLLOVERRIDES="winedbg.exe=d"
 echo "Starting background viewer..."
@@ -79,9 +65,30 @@ echo "Starting background viewer..."
 #
 # !!! REMOVED 'nohup' from inside this string !!!
 #
-set -x
-export EXE_OPTS='-set FirstLoginThisInstall 0 -nonotifications '
-xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox & wine $EXE $EXE_OPTS " & VIEWER_PID=$!
+export WINEPREFIX="$PWD/build/steamuser/.wine"
+(
+    export EXE="$PWD/build/winxtropia-vrmod.$base.exe"
+    export EXEROOT="$(readlink -f $snapshot_dir)/runtime"
+    export EXE_OPTS='-set FirstLoginThisInstall 0 -nonotifications '
+    export WINEPATH=$EXEROOT
+
+    export USER=steamuser
+    export HOME="$PWD/build/steamuser"
+    mkdir -pv $HOME
+    export XDG_DATA_HOME="$HOME/.local/share"
+    export XDG_CONFIG_HOME="$HOME/.config"
+    export XDG_CACHE_HOME="$HOME/.cache"
+    export WINEARCH=win64
+    export WINEDEBUG=-all
+    export WINEDLLOVERRIDES="winedbg.exe=d"
+
+    set -x
+    xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" bash -c "cd $EXEROOT ; echo $PWD $EXE ; fluxbox & wine $EXE $EXE_OPTS " 
+) & VIEWER_PID=$!
+
+echo HOME=$HOME
+sleep 2
+
 sleep 1.0 # Give it a moment
 
 if test -v VIEWER_PID && ps -p $VIEWER_PID >/dev/null; then
@@ -103,7 +110,7 @@ echo "Viewer(pgid ${VIEWER_PID:-})... waiting $N seconds for app to load..."
 # 6. If "STATE_LOGIN_WAIT" is *not* found, 'timeout' will kill the pipe after $N seconds.
 # 7. '|| true' ensures we don't fail the build if it times out (we'll just get a "stuck" screenshot).
 sleep 1
-export xAppData=$WINEPREFIX/drive_c/users/$USER/AppData
+export xAppData=$WINEPREFIX/drive_c/users/steamuser/AppData
 # mkdir -pv $AppData/Roaming/Firestorm_x64/logs
 # mkdir -pv $AppData/Roaming/SecondLife/logs
 # touch /home/runner/.wine/drive_c/users/runner/AppData/Roaming/Firestorm_x64/logs/Firestorm.log
@@ -113,38 +120,38 @@ export xAppData=$WINEPREFIX/drive_c/users/$USER/AppData
 timeout $N bash -c 'set -x ; tail -F $xAppData/Roaming/SecondLife/logs/SecondLife.log $xAppData/Roaming/Firestorm_x64/logs/Firestorm.log 2>/dev/null | grep --line-buffered "STATE_" | tee /dev/stderr | { grep --color=always --line-buffered -m 1 "STATE_LOGIN_WAIT" && pkill -P $$ tail ; }' || true
 sleep 1
 
-grep STATE_LOGIN_WAIT $xAppData/Roaming/*/logs/*.log
+OK=$(grep STATE_LOGIN_WAIT $xAppData/Roaming/*/logs/*.log || true)
+ 
+if [[ -n "$OK" ]] ; then 
+    echo "App reached login screen state!"
+    #DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
+    #DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
 
-echo "App is either ready or $N have passed. Attempting to capture screenshot..."
+    if DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture.jpg ; then
+        echo "Screenshot captured successfully:"
+        ls -lrth screencapture.jpg
+    else
+        echo "Error: Failed to capture screenshot."
+        # Let the script exit; trap will handle cleanup.
+        exit 30
+    fi
+    # Check if the upload script exists
+    if [[ -v GITHUB_ACTIONS && -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
+        echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
+        sleep 5
 
-#DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture_raw.jpg
-#DISPLAY=:99 xwd -root -silent | convert xwd:- screencapture.jpg ; then
-
-if DISPLAY=:99 convert xwd:/tmp/Xvfb_screen0 screencapture.jpg ; then
-    echo "Screenshot captured successfully:"
-    ls -lrth screencapture.jpg
+        # Source it
+        . ./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash
+        # Run the upload
+        gha-upload-artifact-fast screencapture.jpg screencapture.jpg 1 9 true
+    else
+        echo "Warning: Upload script not found. Skipping upload."
+    fi
 else
-    echo "Error: Failed to capture screenshot."
-    # Let the script exit; trap will handle cleanup.
-    exit 30
+    echo "App did not reach login screen... $N have passed."
 fi
 
-sleep 0.5
-# NOTE: We call 'cleanup' here because at this point done with the capture
 cleanup
-
-# Check if the upload script exists
-if [[ test -v GITHUB_ACTIONS && -f "./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash" ]]; then
-    echo "... uploading screenshot in 5 seconds (hit control-c to cancel)"
-    sleep 5
-
-    # Source it
-    . ./p373r-vrmod-devtime/experiments/gha-upload-artifact-fast.bash
-    # Run the upload
-    gha-upload-artifact-fast screencapture.jpg screencapture.jpg 1 9 true
-else
-    echo "Warning: Upload script not found. Skipping upload."
-fi
 
 echo "Script finished."
 # The 'trap' will now execute automatically as the script exits.
