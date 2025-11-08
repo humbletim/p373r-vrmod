@@ -41,7 +41,7 @@ if [ ! -x llvm/bin/clang ] ; then
         echo "LLVM directory is: $LLVM_DIR"
         rm -f llvm
         if [[ "${RUNNER_OS:-}" == Windows ]] ; then
-            cmd //c "mklink /j \"$(cygpath -wa "$LLVM_DIR")\" llvm"
+            cmd //c mklink //j llvm "$(cygpath -wa "$LLVM_DIR")"
         else
             ln -s "$LLVM_DIR" llvm
         fi
