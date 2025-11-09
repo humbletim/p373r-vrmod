@@ -104,6 +104,9 @@ else
 fi
 
 N=60
+if [[ jq . inputs.json | grep ubuntu-slim 2>/dev/null ]] ; then
+    N=180
+fi
 echo "Viewer(pgid ${VIEWER_PID:-})... waiting $N seconds for app to load..."
 
 # This command will:
