@@ -34,7 +34,7 @@ test -d "$snapshot_dir" || fail "missing $snapshot_dir"
 
 # Symlink LLVM
 if [ ! -x llvm/bin/clang ] ; then
-    CLANG_EXE_PATH=$(which clang++) || true
+    CLANG_EXE_PATH=$(which clang++-19 2> /dev/null || which clang++-20 2> /dev/null || which clang++ 2> /dev/null ) || true
     if [ -n "$CLANG_EXE_PATH" ]; then
         echo "clang++ found at: $CLANG_EXE_PATH"
         LLVM_DIR=$(dirname "$(dirname "$(readlink -f "$CLANG_EXE_PATH")")")
