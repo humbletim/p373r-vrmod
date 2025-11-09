@@ -16,9 +16,8 @@ runs:
   steps:
     - name: Run Tmate Debug Session
       # uses: humbletim/firestorm-gha/gha-node20-run@tpv-gha-nunja
-      with:
-       shell: msys2
-       run: |
+      shell: bash
+      run: |
         # DO NOT use 'set -e'. We need to manually control error checking.
 
         export PATH=/bin:/usr/bin:/c/msys64/usr/bin:/c/Program\ Files/GitHub\ CLI:/c/Program\ Files/Git/bin:/c/Program\ Files/LLVM/bin:$PATH
@@ -27,7 +26,11 @@ runs:
         TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
 
         echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
-        pacman -Sy --noconfirm --needed tmate curl jq coreutils > /dev/null || exit 1
+        if which pacman 2>/dev/null ; then
+          pacman -Sy --noconfirm --needed tmate curl jq coreutils > /dev/null || exit 1
+        else
+          sudo apt install tmate curl jq coreutils > /dev/null || exit 1
+        fi
         
         which tmate || exit 2
         tmate -V || exit 3
