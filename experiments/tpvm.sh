@@ -132,13 +132,23 @@ case "$CMD" in
 #undef __RESTORE_CLANG__
 #endif
 EOF
-        echo "Created env/llpreprocessor_shim.h shim."
-
         # Generate wchar.rsp
         # -Xclang -fno-wchar: Treat wchar_t as unsigned short (MSVC compat)
         # -fms-extensions: Enable MS extensions
         # -include env/llpreprocessor_shim.h: Sandwich llpreprocessor.h to hide __clang__ during its inclusion
-        echo "-Xclang -fno-wchar -fms-extensions -include env/llpreprocessor_shim.h" > env/wchar.rsp
+        (
+            echo ""
+            echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
+            echo ""
+            EXTRA_INCS="-I. -isystemsnapshot/source"
+            if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
+                # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
+                EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
+            fi
+            echo "$EXTRA_INCS"
+        ) >> env/compile.rsp
+
+        echo "Created env/llpreprocessor_shim.h shim and appended env/compile.rsp to utilize."
 
         echo "Init complete."
         ;;
@@ -180,28 +190,17 @@ EOF
              fail "Environment not initialized. Run '$0 init' first."
         fi
 
-        EXTRA_INCS="-I. -isystemsnapshot/source"
-        if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
-            # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
-            EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
-        fi
-
-        # Add mm.rsp which provides SSE intrinsics support.
-        # This is explicitly injected by build.bash, so we replicate that here.
-        # Without this, compilation of graphics code (like llviewerdisplay.cpp) fails.
-        MM_RSP="@winsdk/mm.rsp"
-
-        # Force Modern wchar_t Strategy
-        # Uses env/wchar.rsp generated during init
-        WCHAR_RSP="@env/wchar.rsp"
-
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
                 OBJ="${FILE}.obj"
-                echo "Compiling $FILE..." >&2
-                echo "./llvm/bin/clang++ @env/compile.rsp $MM_RSP $WCHAR_RSP $EXTRA_INCS -c $FILE ${CXXFLAGS:-} -o $OBJ"
+                POLYFILL=
+                if [ -s "polyfills/$(basename -s .cpp $FILE).compile.rsp" ] ; then
+                    POLYFILL="@polyfills/$(basename -s .cpp $FILE).compile.rsp"
+                fi
+                echo "Compiling $FILE... $POLYFILL" >&2
+                echo "./llvm/bin/clang++ @env/compile.rsp $POLYFILL -c $FILE ${CXXFLAGS:-} -o $OBJ"
 
-                ./llvm/bin/clang++ @"env/compile.rsp" $MM_RSP $WCHAR_RSP $EXTRA_INCS -c "$FILE" ${CXXFLAGS:-}  -o "$OBJ"
+                ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL -c "$FILE" ${CXXFLAGS:-} -o "$OBJ"
             fi
         done
         ;;
