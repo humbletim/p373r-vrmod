@@ -1,3 +1,9 @@
+# these might already exist but to make sure run:
+ln -sTf /usr/lib/llvm-19 /opt/humbletim/llvm
+ln -sTf /opt/humbletim/llvm /app/llvm
+
+# all these commands are meant to run from this asdf folder
+# SO from the repo root you would invoke as `cd asdf && ../experiments/tpvm.sh ...`
 
 ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
 ../experiments/tpvm.sh mod llstartup.cpp
