@@ -47,10 +47,19 @@ case "$CMD" in
 
         # Symlinks in CWD
         ln -sfn "$LLVM_DIR" llvm
-        ln -sfn "$REPO_ROOT/winsdk" winsdk
         ln -sfn "$SNAPSHOT_ARG" snapshot
 
         mkdir -p env
+
+        # Local winsdk setup to hold generated rsp files while symlinking heavy artifacts
+        mkdir -p winsdk
+        ln -sfn "$REPO_ROOT/winsdk/crt" winsdk/crt
+        ln -sfn "$REPO_ROOT/winsdk/sdk" winsdk/sdk
+
+        # Merge vfsoverlay
+        jq -s ".[0] * { roots: (.[0].roots + .[1].roots) }" \
+            "$REPO_ROOT/experiments/winsdk.in/vfsoverlay.extra.json" \
+            "$REPO_ROOT/winsdk/vfsoverlay.json" > winsdk/_vfsoverlay.json
 
         # Determine base
         SNAPSHOT_NAME=$(basename "$SNAPSHOT_ARG")
@@ -80,6 +89,10 @@ case "$CMD" in
         subst() {
             envsubst '$base $snapshot_dir $devtime $winsdk $_llvm' < "$1" > "$2"
         }
+
+        # Generate winsdk rsp files
+        subst "$REPO_ROOT/experiments/winsdk.in/winsdk.rsp" "winsdk/winsdk.rsp"
+        subst "$REPO_ROOT/experiments/winsdk.in/mm.rsp" "winsdk/mm.rsp"
 
         subst "snapshot/llobjs.rsp.in" "env/llobjs.rsp"
         subst <(sed -e 's@^-I@-isystem@g' "snapshot/llincludes.rsp.in") "env/llincludes.rsp"
