@@ -1,0 +1,14 @@
+--- asdf/snapshot/source/llcommon/llpreprocessor.h	2025-12-17 23:51:44.000000000 +0000
++++ asdf/llpreprocessor.h	2025-12-31 21:36:32.736747005 +0000
+@@ -142,7 +142,10 @@
+ #define LL_DLLIMPORT
+ #endif // LL_WINDOWS
+
+-#if __clang__ || ! defined(LL_WINDOWS)
++// Hack to prevent Boost from specializing for wchar_t since it's now unsigned short
++#define BOOST_NO_INTRINSIC_WCHAR_T 1
++
++#if ! defined(LL_WINDOWS)
+ // Only on Windows, and only with the Microsoft compiler (vs. clang) is
+ // wchar_t potentially not a distinct type.
+ #define LL_WCHAR_T_NATIVE 1
