@@ -1,5 +1,5 @@
 
-../experiments/tpvm.sh init
+../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
 ../experiments/tpvm.sh mod llstartup.cpp
 ../experiments/tpvm.sh mod fsdata.cpp
 
