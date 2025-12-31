@@ -5,16 +5,26 @@ ln -sTf /opt/humbletim/llvm /app/llvm
 # all these commands are meant to run from this asdf folder
 # SO from the repo root you would invoke as `cd asdf && ../experiments/tpvm.sh ...`
 
+# Initialize the environment (generates shim, wchar.rsp, etc.)
 ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
+
+# Mod files (copies from snapshot)
 ../experiments/tpvm.sh mod llstartup.cpp
 ../experiments/tpvm.sh mod fsdata.cpp
 
+# Patch files
 patch -p3 < fsdata.cpp.patch
 patch -p3 < llstartup.cpp.patch
 
-CXXFLAGS=@llstartup.compile.rsp ../experiments/tpvm.sh compile llstartup.cpp
-CXXFLAGS=@fsdata.compile.rsp ../experiments/tpvm.sh compile fsdata.cpp
-LDFLAGS=@fsdata.link.rsp ../experiments/tpvm.sh link
+# Compile files
+# Note: tpvm.sh now automatically handles wchar_t flags and shims.
+# fsdata.cpp no longer needs polyfills.
+# llstartup.cpp still needs an extra include path (for now).
+CXXFLAGS="-isystemsnapshot/source/viewer_components/login" ../experiments/tpvm.sh compile llstartup.cpp
+../experiments/tpvm.sh compile fsdata.cpp
+
+# Link
+../experiments/tpvm.sh link
 
 # diff -u snapshot/source/newview/ llstartup.cpp > llstartup.cpp.patch
 # diff -u snapshot/source/newview/ fsdata.cpp > fsdata.cpp.patch

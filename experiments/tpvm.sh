@@ -114,6 +114,32 @@ case "$CMD" in
         fi
 
         echo "$BASE" > env/base_name
+
+        # Create llpreprocessor_shim.h in env
+        cat <<EOF > env/llpreprocessor_shim.h
+#ifdef __clang__
+#undef __clang__
+#define __RESTORE_CLANG__
+#endif
+
+// Prevent Boost from specializing for wchar_t since it's now unsigned short
+#define BOOST_NO_INTRINSIC_WCHAR_T 1
+
+#include <llpreprocessor.h>
+
+#ifdef __RESTORE_CLANG__
+#define __clang__ 1
+#undef __RESTORE_CLANG__
+#endif
+EOF
+        echo "Created env/llpreprocessor_shim.h shim."
+
+        # Generate wchar.rsp
+        # -Xclang -fno-wchar: Treat wchar_t as unsigned short (MSVC compat)
+        # -fms-extensions: Enable MS extensions
+        # -include env/llpreprocessor_shim.h: Sandwich llpreprocessor.h to hide __clang__ during its inclusion
+        echo "-Xclang -fno-wchar -fms-extensions -include env/llpreprocessor_shim.h" > env/wchar.rsp
+
         echo "Init complete."
         ;;
 
@@ -165,13 +191,17 @@ case "$CMD" in
         # Without this, compilation of graphics code (like llviewerdisplay.cpp) fails.
         MM_RSP="@winsdk/mm.rsp"
 
+        # Force Modern wchar_t Strategy
+        # Uses env/wchar.rsp generated during init
+        WCHAR_RSP="@env/wchar.rsp"
+
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
                 OBJ="${FILE}.obj"
                 echo "Compiling $FILE..." >&2
-                echo "./llvm/bin/clang++ @env/compile.rsp $MM_RSP $EXTRA_INCS -c $FILE ${CXXFLAGS:-} -o $OBJ"
+                echo "./llvm/bin/clang++ @env/compile.rsp $MM_RSP $WCHAR_RSP $EXTRA_INCS -c $FILE ${CXXFLAGS:-} -o $OBJ"
 
-                ./llvm/bin/clang++ @"env/compile.rsp" $MM_RSP $EXTRA_INCS -c "$FILE" ${CXXFLAGS:-}  -o "$OBJ"
+                ./llvm/bin/clang++ @"env/compile.rsp" $MM_RSP $WCHAR_RSP $EXTRA_INCS -c "$FILE" ${CXXFLAGS:-}  -o "$OBJ"
             fi
         done
         ;;
