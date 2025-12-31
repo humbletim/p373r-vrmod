@@ -4,3 +4,4 @@
     -L${snapshot_dir}/3p/lib -llibpng16 -lapr-1 -laprutil-1 -llibexpat -lminizip -lzlib -lmeshoptimizer -llibcollada14dom23-s -lfreetype -ljpeg -llibhunspell -lopenjp2 -llibcurl -llibssl -llibcrypto -lOpenAL32 -lalut -llibvorbisfile -llibvorbis -llibvorbisenc -llibogg -lnghttp2.lib -llibxml2 -Llxmlrpc-epi -llibndofdev -lglu32 -lnvapi
     ${snapshot_dir}/objs/llwebrtc.lib
     -llibboost_program_options-mt-x64 -llibboost_thread-mt-x64 -llibboost_url-mt-x64 -llibboost_fiber-mt-x64 -llibboost_context-mt-x64 -llibboost_wave-mt-x64 -llibboost_filesystem-mt-x64
+    -Wl,/demangle:no

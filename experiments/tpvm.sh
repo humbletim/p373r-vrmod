@@ -21,7 +21,7 @@ case "$CMD" in
         SNAPSHOT_ARG=${1:-}
         if [ -z "$SNAPSHOT_ARG" ]; then
              # Try to find one in repo root _snapshot
-             SNAPSHOT_ARG=$(find "$REPO_ROOT/_snapshot" -maxdepth 1 -type d -name "fs-*" | head -n 1)
+             SNAPSHOT_ARG=$(find "$REPO_ROOT/_snapshot" -maxdepth 1 \( -type d -o -xtype d \) -name "fs-*" | head -n 1)
              test -n "$SNAPSHOT_ARG" || fail "Usage: $0 init <snapshot_dir> (and no fs-* snapshot found in _snapshot)"
         fi
 
@@ -82,7 +82,7 @@ case "$CMD" in
         }
 
         subst "snapshot/llobjs.rsp.in" "env/llobjs.rsp"
-        subst "snapshot/llincludes.rsp.in" "env/llincludes.rsp"
+        subst <(sed -e 's@^-I@-isystem@g' "snapshot/llincludes.rsp.in") "env/llincludes.rsp"
 
         subst "$TEMPLATES_DIR/compile.common.rsp" "env/compile.common.rsp"
         subst "$TEMPLATES_DIR/link.common.rsp" "env/link.common.rsp"
@@ -141,7 +141,7 @@ case "$CMD" in
              fail "Environment not initialized. Run '$0 init' first."
         fi
 
-        EXTRA_INCS="-I. -Isnapshot/source"
+        EXTRA_INCS="-I. -isystemsnapshot/source"
         if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
             # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
             EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
@@ -155,8 +155,10 @@ case "$CMD" in
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
                 OBJ="${FILE}.obj"
-                echo "Compiling $FILE..."
-                ./llvm/bin/clang++ @"env/compile.rsp" $MM_RSP $EXTRA_INCS -c "$FILE" -o "$OBJ"
+                echo "Compiling $FILE..." >&2
+                echo "./llvm/bin/clang++ @env/compile.rsp $MM_RSP $EXTRA_INCS -c $FILE ${CXXFLAGS:-} -o $OBJ"
+
+                ./llvm/bin/clang++ @"env/compile.rsp" $MM_RSP $EXTRA_INCS -c "$FILE" ${CXXFLAGS:-}  -o "$OBJ"
             fi
         done
         ;;
@@ -171,7 +173,7 @@ case "$CMD" in
             LOCAL_OBJS=()
         fi
 
-        echo "Filtering object files..."
+        echo "Filtering object files... ${LOCAL_OBJS[0]}" >&2
 
         # Python script to filter llobjs.rsp
         cat <<EOF > env/filter_llobjs.py
@@ -199,7 +201,7 @@ try:
     with open('env/llobjs_filtered.rsp', 'w') as f:
         f.write('\n'.join(filtered_lines))
 
-    print(f"Filtered {removed_count} original objects.")
+    print(f"Filtered {removed_count} overridden objects.")
 
 except Exception as e:
     print(f"Error filtering objects: {e}")
@@ -215,16 +217,17 @@ EOF
         fi
         OUTPUT_EXE="${BASE_NAME}.exe"
 
-        echo "Linking $OUTPUT_EXE..."
+        echo "Linking $OUTPUT_EXE..." >&2
+        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
 
         # Note: We use clang++ driver for linking instead of lld-link directly.
         # This is because the .rsp files (link.common.rsp, winsdk.rsp) contain
         # Clang driver flags (e.g., -Wl, -target, -isystem) which are not supported
         # by lld-link. clang++ will invoke lld-link (via -fuse-ld=lld) with correct arguments.
         # This matches the behavior of build.bash ("known toolchain overall invocation patterns").
-        ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" -o "$OUTPUT_EXE"
+        ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
 
-        echo "Link complete: $OUTPUT_EXE"
+        echo "Link complete: $OUTPUT_EXE" >&2
         ;;
 
     *)
