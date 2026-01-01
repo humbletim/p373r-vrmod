@@ -9,9 +9,30 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 fail() { echo "$@" >&2; exit 1; }
 
 usage() {
-    echo "Usage: $0 {init|mod|compile|link} [args...]"
+    echo "tpvm.sh - Deterministic Build Driver"
+    echo ""
+    echo "Usage: $0 <command> [arguments]"
+    echo ""
+    echo "Commands:"
+    echo "  init <snapshot_dir>   Initialize environment with snapshot."
+    echo "  mod <filename>        Copy file from snapshot to local directory."
+    echo "  diff <filename>       Diff local file against snapshot."
+    echo "  status [filename]     Show status of local files vs snapshot and polyfills."
+    echo "  compile [files...]    Compile specific .cpp files (defaults to *.cpp)."
+    echo "  link                  Link the application using local objects."
+    echo ""
+    echo "Examples:"
+    echo "  $0 init _snapshot/fs-7.2.2-avx2"
+    echo "  $0 mod llstartup.cpp"
+    echo "  $0 status"
+    echo "  $0 compile llstartup.cpp"
+    echo "  $0 link"
     exit 1
 }
+
+if [[ "${1:-}" == "--help" ]] || [[ -z "${1:-}" ]]; then
+    usage
+fi
 
 CMD=${1:-}
 shift || true
@@ -174,6 +195,107 @@ EOF
         echo "Copied $FOUND to $(pwd)/$(basename "$FOUND")"
         ;;
 
+    diff)
+        FILE_PART=${1:-}
+        if [ -z "$FILE_PART" ]; then
+            fail "Usage: $0 diff <partial_filename>"
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        # Search in snapshot/source
+        FOUND=$(find snapshot/source -name "$FILE_PART" | head -n 1)
+
+        if [ -z "$FOUND" ]; then
+            fail "File not found in snapshot/source: $FILE_PART"
+        fi
+
+        LOCAL_FILE=$(basename "$FOUND")
+        if [ ! -f "$LOCAL_FILE" ]; then
+            fail "Local file not found: $LOCAL_FILE"
+        fi
+
+        diff -u "$FOUND" "$LOCAL_FILE" || true
+        ;;
+
+    status)
+        FILE_PART=${1:-}
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        # Header
+        printf "%-30s %-15s %-15s %-15s\n" "File" "Snapshot Diff" "Polyfills" "Object"
+        echo "-------------------------------------------------------------------------------"
+
+        check_file() {
+            local f=$1
+            local snap_path=$2
+
+            local status_diff="N/A"
+            local status_poly=""
+            local status_obj=""
+
+            if [ -n "$snap_path" ] && [ -f "$snap_path" ]; then
+                if cmp -s "$snap_path" "$f"; then
+                    status_diff="Same"
+                else
+                    status_diff="Modified"
+                fi
+            else
+                status_diff="Local Only"
+            fi
+
+            local base=$(basename "$f" .cpp)
+            base=$(basename "$base" .h)
+
+            if [ -f "polyfills/${base}.compile.rsp" ]; then
+                status_poly="${status_poly}C"
+            fi
+            if [ -f "polyfills/${base}.link.rsp" ]; then
+                status_poly="${status_poly}L"
+            fi
+            [ -z "$status_poly" ] && status_poly="-"
+
+            # Check for object file (foo.cpp.obj)
+            if [ -f "${f}.obj" ]; then
+                status_obj="Present"
+            else
+                status_obj="-"
+            fi
+
+            printf "%-30s %-15s %-15s %-15s\n" "$f" "$status_diff" "$status_poly" "$status_obj"
+        }
+
+        if [ -n "$FILE_PART" ]; then
+             # Check specific file
+             FOUND=$(find snapshot/source -name "$FILE_PART" 2>/dev/null | head -n 1)
+             LOCAL_FILE=$(basename "$FILE_PART")
+             if [ -f "$LOCAL_FILE" ]; then
+                 check_file "$LOCAL_FILE" "$FOUND"
+             else
+                 # Try to find it if it was just a name like llstartup.cpp and it is in current dir
+                 if [ -f "$FILE_PART" ]; then
+                     FOUND=$(find snapshot/source -name "$FILE_PART" 2>/dev/null | head -n 1)
+                     check_file "$FILE_PART" "$FOUND"
+                 else
+                     echo "File not found locally: $FILE_PART"
+                 fi
+             fi
+        else
+            # Scan all local cpp/h files
+            # Use find to avoid errors if no files match
+            find . -maxdepth 1 \( -name "*.cpp" -o -name "*.h" \) -type f | while read -r f; do
+                f=$(basename "$f")
+                FOUND=$(find snapshot/source -name "$f" 2>/dev/null | head -n 1)
+                check_file "$f" "$FOUND"
+            done
+        fi
+        ;;
+
     compile)
         FILES=("$@")
         if [ ${#FILES[@]} -eq 0 ]; then
@@ -260,15 +382,32 @@ EOF
         fi
         OUTPUT_EXE="${BASE_NAME}.exe"
 
+        # Auto-detect polyfills for local objects
+        POLYFILL_ARGS=()
+        if [ ${#LOCAL_OBJS[@]} -gt 0 ]; then
+            for OBJ in "${LOCAL_OBJS[@]}"; do
+                # OBJ is like llstartup.cpp.obj
+                # Basename logic: llstartup.cpp.obj -> llstartup.cpp -> llstartup
+                BASE=$(basename "$OBJ" .obj)
+                BASE=$(basename "$BASE" .cpp)
+
+                LINK_RSP="polyfills/${BASE}.link.rsp"
+                if [ -f "$LINK_RSP" ]; then
+                    echo "Injecting linker polyfill: $LINK_RSP" >&2
+                    POLYFILL_ARGS+=("@$LINK_RSP")
+                fi
+            done
+        fi
+
         echo "Linking $OUTPUT_EXE..." >&2
-        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
+        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
 
         # Note: We use clang++ driver for linking instead of lld-link directly.
         # This is because the .rsp files (link.common.rsp, winsdk.rsp) contain
         # Clang driver flags (e.g., -Wl, -target, -isystem) which are not supported
         # by lld-link. clang++ will invoke lld-link (via -fuse-ld=lld) with correct arguments.
         # This matches the behavior of build.bash ("known toolchain overall invocation patterns").
-        ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
+        ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" "${POLYFILL_ARGS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
 
         echo "Link complete: $OUTPUT_EXE" >&2
         ;;
