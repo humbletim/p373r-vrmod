@@ -32,16 +32,17 @@ We created a minimalist reproduction to isolate the behavior from the Viewer blo
 ### Files
 *   `asdf/repro_app.cpp`: Hijacks `llappviewerwin32.cpp`. Simulates the Local Mod (Caller). Uses `int* const&`.
 *   `asdf/repro_lib.cpp`: Hijacks `fsdata.cpp`. Simulates the Snapshot (Callee). Uses `int*`.
-*   `asdf/experiments/auto_resolve_links.py`: Automates the fix.
+*   `asdf/experiments/generate_alternate_names.py`: Automates the fix.
 
 ### Results
 1.  **Manual Reproduction**: We successfully reproduced the "Undefined symbol" error by compiling the mismatched signatures.
-2.  **Automated Fix**: The `auto_resolve_links.py` script:
-    *   Ran the failing link command.
-    *   Parsed the `?trigger_signal...` undefined symbol.
-    *   Found the matching `?trigger_signal...` symbol in `fsdata.cpp.obj` (the "Snapshot" side).
-    *   Generated `polyfills/autogen.link.rsp` with `/ALTERNATENAME`.
-    *   Successfully linked `repro.exe`.
+2.  **Automated Fix**: The `generate_alternate_names.py` script:
+    *   Parses linker errors from input.
+    *   Identifies the undefined symbol (e.g., `?trigger_signal...`).
+    *   Scans the provided object files (e.g., `fsdata.cpp.obj`) for defined symbols.
+    *   Fuzzy matches based on the core function name.
+    *   Outputs `/ALTERNATENAME` linker flags.
+    *   Successfully enables linking of `repro.exe` when used with response files.
 3.  **Runtime Verification**: `repro.exe` ran successfully under Wine.
     *   Output: `Lib: Invoking signal with int value: 42` -> `App: Slot called! Value: 42`.
     *   This confirms that despite the `T*` vs `T* const&` signature mismatch at the linker level, the runtime behavior is correct for this specific Boost Signals usage.
