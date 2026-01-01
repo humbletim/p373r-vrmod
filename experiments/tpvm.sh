@@ -17,8 +17,11 @@ usage() {
     echo "  init <snapshot_dir>   Initialize environment with snapshot."
     echo "  mod <filename>        Copy file from snapshot to local directory."
     echo "  diff <filename>       Diff local file against snapshot."
-    echo "  status [filename]     Show status of local files vs snapshot and polyfills."
+    echo "  status [overrides]    Show status of local files. 'overrides' lists only overridden filenames."
     echo "  compile [files...]    Compile specific .cpp files (defaults to *.cpp)."
+    echo "  compile_ <basename>   Smart compile: checks dependencies and mtime."
+    echo "  mergetool <basename>  Run meld on snapshot vs local file."
+    echo "  patch <basename>      Safely apply patch (create if missing, verify, apply, rollback on fail)."
     echo "  link                  Link the application using local objects."
     echo ""
     echo "Examples:"
@@ -294,9 +297,12 @@ EOF
         done
 
         # Sort lists (by filename, which is field 2)
-        IFS=$'\n' OVERRIDES=($(sort -t'|' -k2 <<<"${OVERRIDES[*]}"))
-        IFS=$'\n' LOCAL_ONLY=($(sort -t'|' -k2 <<<"${LOCAL_ONLY[*]}"))
-        unset IFS
+        if [ ${#OVERRIDES[@]} -gt 0 ]; then
+             mapfile -t OVERRIDES < <(printf '%s\n' "${OVERRIDES[@]}" | sort -t'|' -k2)
+        fi
+        if [ ${#LOCAL_ONLY[@]} -gt 0 ]; then
+             mapfile -t LOCAL_ONLY < <(printf '%s\n' "${LOCAL_ONLY[@]}" | sort -t'|' -k2)
+        fi
 
         if [[ "$ARG1" == "overrides" ]]; then
             # Output only filenames of overridden files
