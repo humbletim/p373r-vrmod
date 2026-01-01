@@ -1,0 +1,9 @@
+*.cpp
+*.h
+*.log
+*.jpg
+*.png
+/steamuser
+/snapshot
+/env
+/build

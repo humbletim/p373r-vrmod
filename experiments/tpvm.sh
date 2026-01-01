@@ -190,6 +190,7 @@ EOF
              fail "Environment not initialized. Run '$0 init' first."
         fi
 
+        echo "Compiling ${FILES[@]}" >&2
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
                 OBJ="${FILE}.obj"
