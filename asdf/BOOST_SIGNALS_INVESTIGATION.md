@@ -26,47 +26,25 @@ Why does changing `T*` to `T* const&` prevent a crash, and why is the alias need
         *   Maybe the Snapshot *actually* uses `const&` internally in some compilation units but not others?
         *   Or maybe the crash is unrelated to the signature itself but to how `boost` matches slots?
 
-## Reproduction Strategy (Status: Ready to Resume)
+## Reproduction Strategy (Status: Complete)
 We created a minimalist reproduction to isolate the behavior from the Viewer bloat.
 
 ### Files
 *   `asdf/repro_app.cpp`: Hijacks `llappviewerwin32.cpp`. Simulates the Local Mod (Caller). Uses `int* const&`.
 *   `asdf/repro_lib.cpp`: Hijacks `fsdata.cpp`. Simulates the Snapshot (Callee). Uses `int*`.
-*   `asdf/polyfills/repro.link.rsp`: Contains the `/ALTERNATENAME` directive.
+*   `asdf/experiments/auto_resolve_links.py`: Automates the fix.
 
-### Steps to Resume
-1.  **Setup Environment**:
-    ```bash
-    cd asdf
-    ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
-    ../experiments/tpvm.sh mod llappviewerwin32.cpp
-    ../experiments/tpvm.sh mod fsdata.cpp
-    ```
-2.  **Prepare Files**:
-    *   Overwrite `asdf/llappviewerwin32.cpp` with content of `asdf/repro_app.cpp`.
-    *   Overwrite `asdf/fsdata.cpp` with content of `asdf/repro_lib.cpp`.
-3.  **Compile**:
-    ```bash
-    ../experiments/tpvm.sh compile llappviewerwin32.cpp fsdata.cpp
-    ```
-    *   *Verify*: Check `ls -l *.obj`. If `fsdata.cpp.obj` is large/old, the overwrite failed. It should be small.
-4.  **Link**:
-    ```bash
-    ../llvm/bin/clang++ @env/link.rsp @polyfills/repro.link.rsp llappviewerwin32.cpp.obj fsdata.cpp.obj -o repro.exe
-    ```
-5.  **Run**:
-    ```bash
-    wine repro.exe
-    ```
-
-## Automation Goal
-Create a script `experiments/auto_resolve_links.py` that:
-1.  Runs the link command.
-2.  Parses "Undefined symbol" errors.
-3.  Scans provided `.obj` files using `llvm-nm`.
-4.  Finds symbols that match except for `const&` variations (fuzzy match).
-5.  Generates the `link.rsp` with `/ALTERNATENAME`.
-6.  Retries linking.
+### Results
+1.  **Manual Reproduction**: We successfully reproduced the "Undefined symbol" error by compiling the mismatched signatures.
+2.  **Automated Fix**: The `auto_resolve_links.py` script:
+    *   Ran the failing link command.
+    *   Parsed the `?trigger_signal...` undefined symbol.
+    *   Found the matching `?trigger_signal...` symbol in `fsdata.cpp.obj` (the "Snapshot" side).
+    *   Generated `polyfills/autogen.link.rsp` with `/ALTERNATENAME`.
+    *   Successfully linked `repro.exe`.
+3.  **Runtime Verification**: `repro.exe` ran successfully under Wine.
+    *   Output: `Lib: Invoking signal with int value: 42` -> `App: Slot called! Value: 42`.
+    *   This confirms that despite the `T*` vs `T* const&` signature mismatch at the linker level, the runtime behavior is correct for this specific Boost Signals usage.
 
 ## Mistakes & Lessons
 1.  **Environment Persistence**: `tpvm.sh init` must be run if the session resets. The `env/` directory is ephemeral.
