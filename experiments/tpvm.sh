@@ -17,8 +17,11 @@ usage() {
     echo "  init <snapshot_dir>   Initialize environment with snapshot."
     echo "  mod <filename>        Copy file from snapshot to local directory."
     echo "  diff <filename>       Diff local file against snapshot."
-    echo "  status [filename]     Show status of local files vs snapshot and polyfills."
+    echo "  status [overrides]    Show status of local files. 'overrides' lists only overridden filenames."
     echo "  compile [files...]    Compile specific .cpp files (defaults to *.cpp)."
+    echo "  compile_ <basename>   Smart compile: checks dependencies and mtime."
+    echo "  mergetool <basename>  Run meld on snapshot vs local file."
+    echo "  patch <basename>      Safely apply patch (create if missing, verify, apply, rollback on fail)."
     echo "  link                  Link the application using local objects."
     echo ""
     echo "Examples:"
@@ -221,25 +224,23 @@ EOF
         ;;
 
     status)
-        FILE_PART=${1:-}
+        ARG1=${1:-}
 
         if [ ! -d "snapshot" ]; then
             fail "Snapshot symlink not found. Run '$0 init' first."
         fi
 
-        # Header
-        printf "%-30s %-15s %-15s %-15s\n" "File" "Snapshot Diff" "Polyfills" "Object"
-        echo "-------------------------------------------------------------------------------"
-
-        check_file() {
+        check_file_info() {
             local f=$1
             local snap_path=$2
 
             local status_diff="N/A"
             local status_poly=""
             local status_obj=""
+            local is_override=0
 
             if [ -n "$snap_path" ] && [ -f "$snap_path" ]; then
+                is_override=1
                 if cmp -s "$snap_path" "$f"; then
                     status_diff="Same"
                 else
@@ -267,32 +268,251 @@ EOF
                 status_obj="-"
             fi
 
-            printf "%-30s %-15s %-15s %-15s\n" "$f" "$status_diff" "$status_poly" "$status_obj"
+            echo "$is_override|$f|$status_diff|$status_poly|$status_obj"
         }
 
-        if [ -n "$FILE_PART" ]; then
-             # Check specific file
-             FOUND=$(find snapshot/source -name "$FILE_PART" 2>/dev/null | head -n 1)
-             LOCAL_FILE=$(basename "$FILE_PART")
-             if [ -f "$LOCAL_FILE" ]; then
-                 check_file "$LOCAL_FILE" "$FOUND"
-             else
-                 # Try to find it if it was just a name like llstartup.cpp and it is in current dir
-                 if [ -f "$FILE_PART" ]; then
-                     FOUND=$(find snapshot/source -name "$FILE_PART" 2>/dev/null | head -n 1)
-                     check_file "$FILE_PART" "$FOUND"
-                 else
-                     echo "File not found locally: $FILE_PART"
-                 fi
+        # Gather all files
+        # Use find to avoid errors if no files match
+        ALL_FILES=()
+        while IFS= read -r f; do
+             if [ -f "$f" ]; then
+                 ALL_FILES+=("$(basename "$f")")
              fi
-        else
-            # Scan all local cpp/h files
-            # Use find to avoid errors if no files match
-            find . -maxdepth 1 \( -name "*.cpp" -o -name "*.h" \) -type f | while read -r f; do
-                f=$(basename "$f")
-                FOUND=$(find snapshot/source -name "$f" 2>/dev/null | head -n 1)
-                check_file "$f" "$FOUND"
+        done < <(find . -maxdepth 1 \( -name "*.cpp" -o -name "*.h" \) -type f)
+
+        OVERRIDES=()
+        LOCAL_ONLY=()
+
+        for f in "${ALL_FILES[@]}"; do
+             # Find in snapshot
+             FOUND=$(find snapshot/source -name "$f" 2>/dev/null | head -n 1)
+             INFO=$(check_file_info "$f" "$FOUND")
+             IS_OVERRIDE=$(echo "$INFO" | cut -d'|' -f1)
+
+             if [ "$IS_OVERRIDE" -eq 1 ]; then
+                 OVERRIDES+=("$INFO")
+             else
+                 LOCAL_ONLY+=("$INFO")
+             fi
+        done
+
+        # Sort lists (by filename, which is field 2)
+        if [ ${#OVERRIDES[@]} -gt 0 ]; then
+             mapfile -t OVERRIDES < <(printf '%s\n' "${OVERRIDES[@]}" | sort -t'|' -k2)
+        fi
+        if [ ${#LOCAL_ONLY[@]} -gt 0 ]; then
+             mapfile -t LOCAL_ONLY < <(printf '%s\n' "${LOCAL_ONLY[@]}" | sort -t'|' -k2)
+        fi
+
+        if [[ "$ARG1" == "overrides" ]]; then
+            # Output only filenames of overridden files
+            for info in "${OVERRIDES[@]}"; do
+                echo "$info" | cut -d'|' -f2
             done
+        else
+            # Output full status table
+             printf "%-30s %-15s %-15s %-15s\n" "File" "Snapshot Diff" "Polyfills" "Object"
+             echo "-------------------------------------------------------------------------------"
+
+             for info in "${OVERRIDES[@]}"; do
+                 F_NAME=$(echo "$info" | cut -d'|' -f2)
+                 S_DIFF=$(echo "$info" | cut -d'|' -f3)
+                 S_POLY=$(echo "$info" | cut -d'|' -f4)
+                 S_OBJ=$(echo "$info" | cut -d'|' -f5)
+                 printf "%-30s %-15s %-15s %-15s\n" "$F_NAME" "$S_DIFF" "$S_POLY" "$S_OBJ"
+             done
+
+             for info in "${LOCAL_ONLY[@]}"; do
+                 F_NAME=$(echo "$info" | cut -d'|' -f2)
+                 S_DIFF=$(echo "$info" | cut -d'|' -f3)
+                 S_POLY=$(echo "$info" | cut -d'|' -f4)
+                 S_OBJ=$(echo "$info" | cut -d'|' -f5)
+                 printf "%-30s %-15s %-15s %-15s\n" "$F_NAME" "$S_DIFF" "$S_POLY" "$S_OBJ"
+             done
+        fi
+        ;;
+
+    mergetool)
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 mergetool <basename>"
+        fi
+
+        # Find local file
+        LOCAL_FILE=""
+        if [ -f "$BASENAME" ]; then
+            LOCAL_FILE="$BASENAME"
+        elif [ -f "${BASENAME}.cpp" ]; then
+            LOCAL_FILE="${BASENAME}.cpp"
+        elif [ -f "${BASENAME}.h" ]; then
+            LOCAL_FILE="${BASENAME}.h"
+        else
+             fail "Local file not found for basename: $BASENAME"
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        FOUND=$(find snapshot/source -name "$LOCAL_FILE" | head -n 1)
+        if [ -z "$FOUND" ]; then
+            fail "File not found in snapshot/source: $LOCAL_FILE"
+        fi
+
+        echo "Running meld on $FOUND and $LOCAL_FILE..."
+        meld "$FOUND" "$LOCAL_FILE"
+        ;;
+
+    patch)
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 patch <basename>"
+        fi
+
+        PATCH_FILE="${BASENAME}.patch"
+        if [ ! -f "$PATCH_FILE" ]; then
+             fail "Patch file not found: $PATCH_FILE"
+        fi
+
+        # Determine target filename from patch file content or just try basename?
+        # User said "attempt to apply a patch named basename.patch from the current folder to the local copy"
+        # The local copy might be basename.cpp or basename.h?
+        # Typically the patch file implies the file. But we need to ensure the local file exists.
+        # Let's assume the user means the file that corresponds to the basename.
+        # If basename is "fsdata.cpp", then file is fsdata.cpp.
+        # If basename is "fsdata", we might need to guess.
+        # Let's check if basename looks like a file.
+
+        TARGET_FILE="$BASENAME"
+        # If basename doesn't have extension but patch does?
+        # User example: patch -p3 < fsdata.cpp.patch. Basename seems to be "fsdata.cpp" in the command likely.
+
+        # Check if local file exists
+        CREATED_BY_CMD=0
+        if [ ! -f "$TARGET_FILE" ]; then
+             echo "Local file $TARGET_FILE does not exist. Attempting mod..."
+             # Call mod logic (function or recursive)
+             # Reuse mod logic by calling self
+             "$0" mod "$TARGET_FILE"
+             CREATED_BY_CMD=1
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        FOUND=$(find snapshot/source -name "$TARGET_FILE" | head -n 1)
+        if [ -z "$FOUND" ]; then
+             fail "File not found in snapshot/source: $TARGET_FILE"
+        fi
+
+        # Verify unmodified from snapshot
+        if ! cmp -s "$FOUND" "$TARGET_FILE"; then
+             fail "Local file $TARGET_FILE is modified compared to snapshot. Aborting patch."
+        fi
+
+        echo "Applying patch $PATCH_FILE to $TARGET_FILE..."
+        # Try applying patch.
+        # User manual uses -p3. I should probably be flexible or just try.
+        # But wait, patch command usually reads from stdin or file.
+        # I'll try `patch -i PATCH_FILE` which automatically detects headers usually.
+        # Or `patch < PATCH_FILE`.
+        # I'll rely on `patch` to figure it out or use common flags?
+        # The user's manual has `patch -p3 < ...`
+        # If I run just `patch`, it might ask for file.
+        # I'll provide the file as argument to patch if possible. `patch TARGET_FILE < PATCH_FILE`?
+        # Or `patch -i PATCH_FILE TARGET_FILE`?
+        # Standard patch: `patch [options] [originalfile [patchfile]]`
+
+        if patch -i "$PATCH_FILE" "$TARGET_FILE"; then
+             echo "Patch applied successfully."
+        else
+             echo "Patch failed."
+             if [ "$CREATED_BY_CMD" -eq 1 ]; then
+                 echo "Removing created file $TARGET_FILE..."
+                 rm "$TARGET_FILE"
+             else
+                 echo "Restoring $TARGET_FILE from snapshot..."
+                 cp "$FOUND" "$TARGET_FILE"
+             fi
+             exit 1
+        fi
+        ;;
+
+    compile_)
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 compile_ <basename>"
+        fi
+
+        SRC_FILE=""
+        if [ -f "$BASENAME" ]; then
+            SRC_FILE="$BASENAME"
+        elif [ -f "${BASENAME}.cpp" ]; then
+            SRC_FILE="${BASENAME}.cpp"
+        else
+             fail "Source file not found: $BASENAME"
+        fi
+
+        OBJ_FILE="${SRC_FILE}.obj"
+
+        NEEDS_COMPILE=0
+
+        if [ ! -f "$OBJ_FILE" ]; then
+            NEEDS_COMPILE=1
+            REASON="Object file missing"
+        else
+            # Mtime check of source
+            if [ "$SRC_FILE" -nt "$OBJ_FILE" ]; then
+                NEEDS_COMPILE=1
+                REASON="$SRC_FILE newer than object"
+            fi
+        fi
+
+        DEPS=("$SRC_FILE")
+
+        # Scan immediate headers
+        # Naive: grep #include "..."
+        # We only care about header files that we can find locally or in snapshot/source
+        # to check their mtime.
+
+        # Get list of included files (naive regex)
+        INCLUDES=$(grep -E '^\s*#\s*include\s*"' "$SRC_FILE" | cut -d'"' -f2)
+
+        for inc in $INCLUDES; do
+            # Resolve
+            RESOLVED=""
+            if [ -f "$inc" ]; then
+                RESOLVED="$inc"
+            elif [ -d "snapshot" ]; then
+                 # Try finding in snapshot/source
+                 # This might be slow if we search everything.
+                 # User said "immediate headers".
+                 # He also said "if any of them are newer...".
+                 # If header is not in local dir, check if it's in snapshot.
+                 # But headers in snapshot might be in subdirs.
+                 # We can use `find snapshot/source -name basename`
+                 FOUND=$(find snapshot/source -name "$(basename "$inc")" -print -quit)
+                 if [ -n "$FOUND" ]; then
+                     RESOLVED="$FOUND"
+                 fi
+            fi
+
+            if [ -n "$RESOLVED" ]; then
+                DEPS+=("$(basename "$RESOLVED")")
+                if [ "$NEEDS_COMPILE" -eq 0 ] && [ "$RESOLVED" -nt "$OBJ_FILE" ]; then
+                    NEEDS_COMPILE=1
+                    REASON="$RESOLVED newer than object"
+                fi
+            fi
+        done
+
+        if [ "$NEEDS_COMPILE" -eq 1 ]; then
+             echo "Compiling due to: $REASON"
+             "$0" compile "$SRC_FILE"
+        else
+             echo "No modifications detected."
+             echo "Scanned dependencies: ${DEPS[*]}"
         fi
         ;;
 
