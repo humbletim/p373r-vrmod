@@ -37,7 +37,7 @@ index fa6d16327a..3946ab35d2 100644
 +			//################################### END P373R ######################################
 +			//swap();
 +			//################################### P373R ######################################
-+			if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.eyeDistance() > 0)
++			if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.m_fEyeDistance > 0)
 +			{
 +				goto sec;
 +
