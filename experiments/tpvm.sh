@@ -165,10 +165,10 @@ EOF
             echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
             echo ""
             EXTRA_INCS="-I. -isystemsnapshot/source"
-            if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
-                # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
-                EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
-            fi
+            # if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
+            #     # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
+            #     EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
+            # fi
             echo "$EXTRA_INCS"
         ) >> env/compile.rsp
 

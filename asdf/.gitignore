@@ -7,3 +7,8 @@
 /snapshot
 /env
 /build
+/holostorm
+/winsdk
+/llvm
+/snapshot
+!/snapshot/source
