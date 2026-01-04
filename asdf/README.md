@@ -23,7 +23,7 @@ patch -p3 < llviewerregion.h.patch
 # Compile files
 ../experiments/tpvm.sh compile llstartup.cpp
 ../experiments/tpvm.sh compile fsdata.cpp
-LDFLAGS=@polyfills/llviewerregion.link.rsp ../experiments/tpvm.sh compile llviewerregion.cpp
+../experiments/tpvm.sh compile llviewerregion.cpp
 
 # Link
 ../experiments/tpvm.sh link
