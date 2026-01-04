@@ -2,8 +2,9 @@
 set -euo pipefail
 
 set -x
-# Usage: ./jules/screenshot.sh
+# Usage: ./jules/screenshot.sh [extra firestorm command line arguments]
 
+export SCREENSHOT_OPTS="$@"
 base_name=$(cat env/base_name)
 EXE="$PWD/${base_name}.exe"
 
@@ -15,6 +16,7 @@ fi
 SNAPSHOT_DIR="../_snapshot/${base_name}"
 EXEROOT="$(readlink -f $SNAPSHOT_DIR)/runtime"
 WINEPREFIX="$PWD/steamuser/.wine"
+WINE_EXE=${WINE_EXE:-wine}
 
 echo "Setting up environment..."
 
@@ -22,8 +24,10 @@ cleanup() {
     echo "Cleaning up..."
     pkill -e -P $$ || true
     if [ -n "${VIEWER_PID:-}" ]; then
+        echo "kill $VIEWER_PID"
         kill -TERM "$VIEWER_PID" 2>/dev/null || true
     fi
+    ps faux | grep -E 'X[v]fb|tim[e]out'
 }
 trap cleanup EXIT
 
@@ -49,7 +53,7 @@ rm -vf "$LOG_FILE"
 echo "Launching viewer..."
 (
     eatmydata xvfb-run -s "-screen 0 1024x768x24 -fbdir /tmp" \
-        bash -c "cd $EXEROOT ; echo \$PWD \$EXE ; fluxbox 2>&1 & wine \$EXE \$EXE_OPTS 2>&1" \
+        bash -c "cd $EXEROOT ; echo \$PWD \$EXE ; fluxbox 2>&1 & $WINE_EXE \$EXE \$EXE_OPTS \$SCREENSHOT_OPTS 2>&1" \
         > jules_wine.log 2>&1
 ) & VIEWER_PID=$!
 
