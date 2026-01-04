@@ -5,6 +5,7 @@ set -x
 # Usage: ./jules/screenshot.sh [extra firestorm command line arguments]
 
 export SCREENSHOT_OPTS="$@"
+export STATE_MATCH=${STATE_MATCH:-STATE_LOGIN_WAIT}
 base_name=$(cat env/base_name)
 EXE="$PWD/${base_name}.exe"
 
@@ -69,7 +70,7 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-if timeout $TIMEOUT bash -c "tail -F $LOG_FILE 2>/dev/null | grep --line-buffered -m 1 'STATE_LOGIN_WAIT'"; then
+if timeout $TIMEOUT bash -c "tail -F $LOG_FILE 2>/dev/null | grep --line-buffered -m 1 '$STATE_MATCH'"; then
     echo "Login screen reached!"
     sleep 2
     if convert xwd:/tmp/Xvfb_screen0 screenshot.jpg; then
