@@ -558,7 +558,7 @@ EOF
             LOCAL_OBJS=()
         fi
 
-        echo "Filtering object files... ${LOCAL_OBJS[0]}" >&2
+        echo "Filtering object files... ${LOCAL_OBJS[@]}" >&2
 
         # Python script to filter llobjs.rsp
         cat <<EOF > env/filter_llobjs.py
