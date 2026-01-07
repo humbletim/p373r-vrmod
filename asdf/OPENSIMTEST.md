@@ -19,8 +19,8 @@ ln -sTf /opt/humbletim/llvm /app/llvm
 ### Execution Helper
 Define this helper function to simplify commands run within the `asdf` context:
 ```bash
-run_in_asdf() {
-  (cd asdf && env "$@")
+asdf_tpvm() {
+  (cd asdf && ../experiments/tpvm.sh "$@")
 }
 ```
 
@@ -33,23 +33,23 @@ cd hypergrid-naturalist-observatory && make opensim-core
 ## Environment prep:
 ```bash
 # Initialize the environment (generates shim, wchar.rsp, etc.)
-run_in_asdf ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
+asdf_tpvm init ../_snapshot/fs-7.2.2-avx2
 ```
 
 ## Modding prep:
 ```bash
-run_in_asdf ../experiments/tpvm.sh mod llviewerdisplay.cpp
+asdf_tpvm mod llviewerdisplay.cpp
 ```
 
 ## Compile
 ```bash
 # Compile files (requires community include path for llviewerVR.cpp)
-run_in_asdf CXXFLAGS=-I../community ../experiments/tpvm.sh compile llviewerdisplay.cpp
+CXXFLAGS=-I$PWD/community run_in_asdf compile llviewerdisplay.cpp
 ```
 
 ## Link
 ```bash
-run_in_asdf ../experiments/tpvm.sh link
+asdf_tpvm link
 ```
 
 ## Screenshot
@@ -67,7 +67,7 @@ cd hypergrid-naturalist-observatory && echo 'show uptime' | bash ./species/opens
 ### capture screenshot of successful logging in and entering region...
 ```bash
 # Note: Increased timeout to accommodate login latency
-run_in_asdf TIMEOUT=120s ./manual_screenshot.sh --grid http://localhost:9000 --login "Test User" password
+cd asdf && TIMEOUT=180s ./manual_screenshot.sh --grid http://localhost:9000 --login "Test User" password
 ```
 
 NOTE: `asdf/screenshot-region.jpg` should become captured -- show it to the user using `frontend_verification_complete`
