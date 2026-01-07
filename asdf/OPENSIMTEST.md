@@ -2,6 +2,28 @@
 
 execute each of the following blocks as *separate bash invocations*.
 
+## 0. Pre-flight Checks & Setup
+
+### System Integrity Check
+**CRITICAL:** Verify that `/opt/humbletim` exists.
+If `/opt/humbletim` does **NOT** exist, this is a **FATAL SYSTEM ERROR**.
+**STOP IMMEDIATELY**. Do not attempt to create the directory or install dependencies manually. Report the environment failure.
+
+### One-time Symlink Setup
+Ensure the following LLVM toolchain symlinks are established:
+```bash
+ln -sTf /usr/lib/llvm-19 /opt/humbletim/llvm
+ln -sTf /opt/humbletim/llvm /app/llvm
+```
+
+### Execution Helper
+Define this helper function to simplify commands run within the `asdf` context:
+```bash
+run_in_asdf() {
+  (cd asdf && env "$@")
+}
+```
+
 ## Set up Observatory-OpenSim
 ```bash
 git clone https://github.com/metaverse-crossroads/hypergrid-naturalist-observatory
@@ -10,26 +32,24 @@ cd hypergrid-naturalist-observatory && make opensim-core
 
 ## Environment prep:
 ```bash
-ln -sTf /usr/lib/llvm-19 /opt/humbletim/llvm
-ln -sTf /opt/humbletim/llvm /app/llvm
 # Initialize the environment (generates shim, wchar.rsp, etc.)
-cd asdf && ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
+run_in_asdf ../experiments/tpvm.sh init ../_snapshot/fs-7.2.2-avx2
 ```
 
 ## Modding prep:
 ```bash
-cd asdf && ../experiments/tpvm.sh mod llviewerdisplay.cpp
+run_in_asdf ../experiments/tpvm.sh mod llviewerdisplay.cpp
 ```
 
 ## Compile
 ```bash
-# Compile files
-cd asdf && ../experiments/tpvm.sh compile llviewerdisplay.cpp
+# Compile files (requires community include path for llviewerVR.cpp)
+run_in_asdf CXXFLAGS=-I../community ../experiments/tpvm.sh compile llviewerdisplay.cpp
 ```
 
 ## Link
 ```bash
-cd asdf && ../experiments/tpvm.sh link
+run_in_asdf ../experiments/tpvm.sh link
 ```
 
 ## Screenshot
@@ -46,12 +66,13 @@ cd hypergrid-naturalist-observatory && echo 'show uptime' | bash ./species/opens
 
 ### capture screenshot of successful logging in and entering region...
 ```bash
-cd asdf && TIMEOUT=90s ./manual_screenshot.sh --grid http://localhost:9000 --login Test User password
+# Note: Increased timeout to accommodate login latency
+run_in_asdf TIMEOUT=120s ./manual_screenshot.sh --grid http://localhost:9000 --login "Test User" password
 ```
 
 NOTE: `asdf/screenshot-region.jpg` should become captured -- show it to the user using `frontend_verification_complete`
 
 ### notify opensim-core to quit
 ```bash
-cd hypergrid-naturalist-observatory && echo 'die' | bash ./species/opensim-core/rest-console/execute_opensim_console_command.sh
+cd hypergrid-naturalist-observatory && echo 'quit' | bash ./species/opensim-core/rest-console/execute_opensim_console_command.sh
 ```
