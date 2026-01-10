@@ -476,30 +476,52 @@ EOF
         # We only care about header files that we can find locally or in snapshot/source
         # to check their mtime.
 
+        # 1. Parse -I paths from CXXFLAGS into an array
+        #    (splits by space, strips -I prefix)
+        SEARCH_DIRS=()
+        for flag in ${CXXFLAGS:-}; do
+            if [[ "$flag" == -I* ]]; then
+                SEARCH_DIRS+=("${flag#-I}")
+            fi
+        done
+
         # Get list of included files (naive regex)
         INCLUDES=$(grep -E '^\s*#\s*include\s*"' "$SRC_FILE" | cut -d'"' -f2)
 
         for inc in $INCLUDES; do
-            # Resolve
             RESOLVED=""
+            inc_base=$(basename "$inc")
+
+            # A. Check local file (Standard "" behavior)
             if [ -f "$inc" ]; then
                 RESOLVED="$inc"
-            elif [ -d "snapshot" ]; then
-                 # Try finding in snapshot/source
-                 # This might be slow if we search everything.
-                 # User said "immediate headers".
-                 # He also said "if any of them are newer...".
-                 # If header is not in local dir, check if it's in snapshot.
-                 # But headers in snapshot might be in subdirs.
-                 # We can use `find snapshot/source -name basename`
-                 FOUND=$(find snapshot/source -name "$(basename "$inc")" -print -quit)
+            
+            # B. Check CXXFLAGS search paths
+            else
+                for dir in "${SEARCH_DIRS[@]}"; do
+                    # Check 1: Standard path composition (dir + relative path)
+                    if [ -f "${dir}/${inc}" ]; then
+                        RESOLVED="${dir}/${inc}"
+                        break
+                    # Check 2: Flattened basename match (per your specific request)
+                    elif [ -f "${dir}/${inc_base}" ]; then
+                        RESOLVED="${dir}/${inc_base}"
+                        break
+                    fi
+                done
+            fi
+
+            # C. Fallback to snapshot/source recursive find
+            if [ -z "$RESOLVED" ] && [ -d "snapshot" ]; then
+                 FOUND=$(find snapshot/source -name "$inc_base" -print -quit)
                  if [ -n "$FOUND" ]; then
                      RESOLVED="$FOUND"
                  fi
             fi
 
+            # D. Timestamp Check
             if [ -n "$RESOLVED" ]; then
-                DEPS+=("$(basename "$RESOLVED")")
+                DEPS+=("$inc_base")
                 if [ "$NEEDS_COMPILE" -eq 0 ] && [ "$RESOLVED" -nt "$OBJ_FILE" ]; then
                     NEEDS_COMPILE=1
                     REASON="$RESOLVED newer than object"
@@ -507,9 +529,10 @@ EOF
             fi
         done
 
+
         if [ "$NEEDS_COMPILE" -eq 1 ]; then
              echo "Compiling due to: $REASON"
-             "$0" compile "$SRC_FILE"
+            "$0" compile "$SRC_FILE"
         else
              echo "No modifications detected."
              echo "Scanned dependencies: ${DEPS[*]}"

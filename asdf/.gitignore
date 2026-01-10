@@ -1,4 +1,8 @@
 *.cpp
+*.cpp.obj
+*.exe
+*.lib
+*.pdb
 *.h
 *.log
 *.jpg
@@ -8,6 +12,7 @@
 /env
 /build
 /holostorm
+/ofc
 /winsdk
 /llvm
 /snapshot
