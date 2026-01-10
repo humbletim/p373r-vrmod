@@ -153,11 +153,11 @@ void instrument_vrmod_settings() {
         "VR Mod Advanced Configuration.\n\n"
         "NOTE: Please use the individual `vrmod.*` settings for tuning.\n\n"
         "Editing this JSON string directly may cause settings to reset if invalid.",
-#if __firestorm__
+#if !__secondlife__
         eSanityType::SANITY_TYPE_NONE, LLSD(), "",
 #endif
         LLControlVariable::PERSIST_NONDFT,
-#if __firestorm__
+#if !__secondlife__
         true, // can_backup
 #endif
         true // hide from DebugSettings (in favor of individual vrmod.* settings)

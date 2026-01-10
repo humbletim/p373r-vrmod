@@ -1,0 +1,23 @@
+--- snapshot/source/newview/fsdata.cpp	2025-10-27 15:35:27.000000000 -0400
++++ fsdata.cpp	2025-12-30 23:29:52.165115616 -0500
+@@ -65,9 +65,9 @@
+ const LLUUID MAGIC_ID("3c115e51-04f4-523c-9fa6-98aff1034730");
+ 
+ FSData::FSData() :
+-    mLegacySearch(true),
+-    mFSDataDone(false),
+-    mAgentsDone(false)
++    mLegacySearch(false),
++    mFSDataDone(true),
++    mAgentsDone(true)
+ {
+     mHeaders.insert("User-Agent", LLViewerMedia::getInstance()->getCurrentUserAgent());
+     mHeaders.insert("viewer-version", LLVersionInfo::getInstance()->getChannelAndVersionFS());
+@@ -297,6 +297,7 @@
+ // call this just before the login screen and after the LLProxy has been setup.
+ void FSData::startDownload()
+ {
++    return;
+     mFSdataFilename = gDirUtilp->getExpandedFilename(LL_PATH_USER_SETTINGS, "fsdata.xml");
+     mFSdataDefaultsFilename = gDirUtilp->getExpandedFilename(LL_PATH_USER_SETTINGS, llformat("fsdata_defaults.%s.xml", LLVersionInfo::getInstance()->getShortVersion().c_str()));
+     mClientTagsFilename = gDirUtilp->getExpandedFilename(LL_PATH_USER_SETTINGS, "client_list_v2.xml");

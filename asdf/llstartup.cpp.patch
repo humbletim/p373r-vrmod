@@ -1,0 +1,11 @@
+--- snapshot/source/newview/llstartup.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llstartup.cpp	2025-12-30 23:29:24.100364293 -0500
+@@ -4039,7 +4039,7 @@
+ void LLStartUp::setStartupState( EStartupState state )
+ {
+     LL_INFOS("AppInit") << getStartupStateString() << " --> " << startupStateToString(state) << LL_ENDL;
+-
++    fprintf(stdout, "{ \"startup\": \"%s\" }\n", startupStateToString(state).c_str());fflush(stdout);
+     getPhases().stopPhase(getStartupStateString());
+     gStartupState = state;
+     getPhases().startPhase(getStartupStateString());
