@@ -43,8 +43,8 @@ asdf_tpvm mod llviewerdisplay.cpp
 
 ## Compile
 ```bash
-# Compile files (requires community include path for llviewerVR.cpp)
-CXXFLAGS=-I$PWD/community run_in_asdf compile llviewerdisplay.cpp
+# Compile files (requires community include path)
+CXXFLAGS=-I$PWD/community asdf_tpvm compile llviewerdisplay.cpp
 ```
 
 ## Link
