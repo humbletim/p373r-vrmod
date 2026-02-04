@@ -366,7 +366,7 @@ EOF
             fail "Usage: $0 patch <basename>"
         fi
 
-        PATCH_FILE="${BASENAME}.patch"
+        PATCH_FILE="patches/${BASENAME}.patch"
         if [ ! -f "$PATCH_FILE" ]; then
              fail "Patch file not found: $PATCH_FILE"
         fi
