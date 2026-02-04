@@ -165,10 +165,6 @@ EOF
             echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
             echo ""
             EXTRA_INCS="-I. -isystemsnapshot/source"
-            # if [ -d "$REPO_ROOT/sgeo-minimal" ]; then
-            #     # sgeo-minimal is required for certain patched files (e.g. llviewerdisplay.cpp)
-            #     EXTRA_INCS="$EXTRA_INCS -I$REPO_ROOT/sgeo-minimal"
-            # fi
             echo "$EXTRA_INCS"
         ) >> env/compile.rsp
 
@@ -261,8 +257,9 @@ EOF
             fi
             [ -z "$status_poly" ] && status_poly="-"
 
-            # Check for object file (foo.cpp.obj)
-            if [ -f "${f}.obj" ]; then
+            # UPDATED: Check for object file in build/ dir
+            # Preserves hierarchy, e.g., build/vrmod/session.hpp.obj
+            if [ -f "build/${f}.obj" ]; then
                 status_obj="Present"
             else
                 status_obj="-"
@@ -374,18 +371,7 @@ EOF
              fail "Patch file not found: $PATCH_FILE"
         fi
 
-        # Determine target filename from patch file content or just try basename?
-        # User said "attempt to apply a patch named basename.patch from the current folder to the local copy"
-        # The local copy might be basename.cpp or basename.h?
-        # Typically the patch file implies the file. But we need to ensure the local file exists.
-        # Let's assume the user means the file that corresponds to the basename.
-        # If basename is "fsdata.cpp", then file is fsdata.cpp.
-        # If basename is "fsdata", we might need to guess.
-        # Let's check if basename looks like a file.
-
         TARGET_FILE="$BASENAME"
-        # If basename doesn't have extension but patch does?
-        # User example: patch -p3 < fsdata.cpp.patch. Basename seems to be "fsdata.cpp" in the command likely.
 
         # Check if local file exists
         CREATED_BY_CMD=0
@@ -413,17 +399,6 @@ EOF
 
         echo "Applying patch $PATCH_FILE to $TARGET_FILE..."
         # Try applying patch.
-        # User manual uses -p3. I should probably be flexible or just try.
-        # But wait, patch command usually reads from stdin or file.
-        # I'll try `patch -i PATCH_FILE` which automatically detects headers usually.
-        # Or `patch < PATCH_FILE`.
-        # I'll rely on `patch` to figure it out or use common flags?
-        # The user's manual has `patch -p3 < ...`
-        # If I run just `patch`, it might ask for file.
-        # I'll provide the file as argument to patch if possible. `patch TARGET_FILE < PATCH_FILE`?
-        # Or `patch -i PATCH_FILE TARGET_FILE`?
-        # Standard patch: `patch [options] [originalfile [patchfile]]`
-
         if patch -i "$PATCH_FILE" "$TARGET_FILE"; then
              echo "Patch applied successfully."
         else
@@ -440,9 +415,17 @@ EOF
         ;;
 
     compile_)
+        # If we have more than 2 args (compile_ + file1 + file2...), recurse
+        if [ "$#" -gt 1 ]; then 
+            for x in "$@"; do
+                 # Call self with the command and the single arg
+                 "$0" compile_ "$x"
+            done
+            exit 0
+        fi
         BASENAME=${1:-}
         if [ -z "$BASENAME" ]; then
-            fail "Usage: $0 compile_ <basename>"
+            fail "Usage: $0 compile_ <source> [<source>...]"
         fi
 
         SRC_FILE=""
@@ -454,7 +437,7 @@ EOF
              fail "Source file not found: $BASENAME"
         fi
 
-        OBJ_FILE="${SRC_FILE}.obj"
+        OBJ_FILE="build/${SRC_FILE}.obj"
 
         NEEDS_COMPILE=0
 
@@ -462,7 +445,7 @@ EOF
             NEEDS_COMPILE=1
             REASON="Object file missing"
         else
-            # Mtime check of source
+            # Mtime check of source against build/ artifact
             if [ "$SRC_FILE" -nt "$OBJ_FILE" ]; then
                 NEEDS_COMPILE=1
                 REASON="$SRC_FILE newer than object"
@@ -472,21 +455,30 @@ EOF
         DEPS=("$SRC_FILE")
 
         # Scan immediate headers
-        # Naive: grep #include "..."
-        # We only care about header files that we can find locally or in snapshot/source
-        # to check their mtime.
+        # Get list of included files (naive regex)
+        INCLUDES=$(grep -E '^\s*#\s*include\s*"' "$SRC_FILE" | cut -d'"' -f2) || { echo "no (non-system) includes $SRC_FILE?" >&2 ; true; }
 
-        # 1. Parse -I paths from CXXFLAGS into an array
-        #    (splits by space, strips -I prefix)
+        # 0. grab additional CXXFLAGS from polyfills 
+        POLYFILL=
+        if [ -s "polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp" ] ; then
+            INCLUDES="$INCLUDES polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp"
+            POLYFILL="$(cat polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp)"
+        fi
+        if [ -s "polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp" ] ; then
+            POLYFILL="$(cat polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp)"
+            INCLUDES="$INCLUDES polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp"
+        fi
+
+        # 1. Parse -I paths from CXXFLAGS into an array (splits by space, strips -I prefix)
         SEARCH_DIRS=()
-        for flag in ${CXXFLAGS:-}; do
+        for flag in ${CXXFLAGS:-} ${POLYFILL}; do
             if [[ "$flag" == -I* ]]; then
                 SEARCH_DIRS+=("${flag#-I}")
             fi
+            if [[ "$flag" == -include* ]]; then
+                INCLUDES="$INCLUDES ${flag#-include}"
+            fi
         done
-
-        # Get list of included files (naive regex)
-        INCLUDES=$(grep -E '^\s*#\s*include\s*"' "$SRC_FILE" | cut -d'"' -f2)
 
         for inc in $INCLUDES; do
             RESOLVED=""
@@ -503,7 +495,7 @@ EOF
                     if [ -f "${dir}/${inc}" ]; then
                         RESOLVED="${dir}/${inc}"
                         break
-                    # Check 2: Flattened basename match (per your specific request)
+                    # Check 2: Flattened basename match
                     elif [ -f "${dir}/${inc_base}" ]; then
                         RESOLVED="${dir}/${inc_base}"
                         break
@@ -519,7 +511,7 @@ EOF
                  fi
             fi
 
-            # D. Timestamp Check
+            # D. Check resolved include against the build/ object
             if [ -n "$RESOLVED" ]; then
                 DEPS+=("$inc_base")
                 if [ "$NEEDS_COMPILE" -eq 0 ] && [ "$RESOLVED" -nt "$OBJ_FILE" ]; then
@@ -534,20 +526,16 @@ EOF
              echo "Compiling due to: $REASON"
             "$0" compile "$SRC_FILE"
         else
-             echo "No modifications detected."
-             echo "Scanned dependencies: ${DEPS[*]}"
+             echo "No modifications detected ($SRC_FILE ; scanned dependencies: ${#DEPS[*]})"
         fi
         ;;
 
     compile)
         FILES=("$@")
-        if [ ${#FILES[@]} -eq 0 ]; then
-            FILES=(*.cpp)
-        fi
 
         # Check if any files exist
         if [ ! -e "${FILES[0]}" ]; then
-             echo "No files to compile."
+             echo "No files to compile. ${FILES[@]}"
              exit 0
         fi
 
@@ -558,15 +546,27 @@ EOF
         echo "Compiling ${FILES[@]}" >&2
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
-                OBJ="${FILE}.obj"
+                # 1. Target build/ and ensure directory exists
+                OBJ="build/${FILE}.obj"
+                mkdir -p "$(dirname "$OBJ")"
+
+                # 2. Existing Polyfill Logic (Legacy/Sidecar)
                 POLYFILL=
                 if [ -s "polyfills/$(basename -s .cpp $FILE).compile.rsp" ] ; then
                     POLYFILL="@polyfills/$(basename -s .cpp $FILE).compile.rsp"
                 fi
-                echo "Compiling $FILE... $POLYFILL" >&2
-                echo "./llvm/bin/clang++ @env/compile.rsp $POLYFILL -c $FILE ${CXXFLAGS:-} -o $OBJ"
+                if [ -s "polyfills/$(echo $FILE | sed -e 's@/@.@g').compile.rsp" ] ; then
+                    POLYFILL="$(cat polyfills/$(echo $FILE | sed -e 's@/@.@g').compile.rsp)"
+                fi
 
-                ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL -c "$FILE" ${CXXFLAGS:-} -o "$OBJ"
+                # 3. NEW: In-File "Toolchain Confession"
+                # Extract string between "TPVM_RECIPE: " and the closing quote "
+                HEADER_OPTS=$(grep -m 1 "TPVM_RECIPE:" "$FILE" | sed -n 's/.*TPVM_RECIPE: \([^"]*\)".*/\1/p') || true
+
+                # echo "Compiling $FILE... $POLYFILL $HEADER_OPTS" >&2
+                
+                echo ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ" >&2
+                ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ"
             fi
         done
         ;;
@@ -576,8 +576,13 @@ EOF
              fail "Environment not initialized. Run '$0 init' first."
         fi
 
-        LOCAL_OBJS=(*.obj)
-        if [ ! -e "${LOCAL_OBJS[0]}" ]; then
+        LOCAL_OBJS=()
+        
+        # This catches build/foo.obj AND build/vrmod/bar.obj
+        mapfile -t LOCAL_OBJS < <(find build -type f -name "*.obj")
+
+        if [ ! -e "${LOCAL_OBJS[0]:-}" ]; then
+            echo "No local objects found in build/." >&2
             LOCAL_OBJS=()
         fi
 
@@ -629,10 +634,9 @@ EOF
         POLYFILL_ARGS=()
         if [ ${#LOCAL_OBJS[@]} -gt 0 ]; then
             for OBJ in "${LOCAL_OBJS[@]}"; do
-                # OBJ is like llstartup.cpp.obj
-                # Basename logic: llstartup.cpp.obj -> llstartup.cpp -> llstartup
-                BASE=$(basename "$OBJ" .obj)
-                BASE=$(basename "$BASE" .cpp)
+                # OBJ is now like build/vrmod/llviewercamera.cpp.obj
+                BASE=$(basename "$OBJ" .obj)  # -> llviewercamera.cpp
+                BASE=$(basename "$BASE" .cpp) # -> llviewercamera
 
                 LINK_RSP="polyfills/${BASE}.link.rsp"
                 if [ -f "$LINK_RSP" ]; then
@@ -643,13 +647,8 @@ EOF
         fi
 
         echo "Linking $OUTPUT_EXE..." >&2
-        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
 
-        # Note: We use clang++ driver for linking instead of lld-link directly.
-        # This is because the .rsp files (link.common.rsp, winsdk.rsp) contain
-        # Clang driver flags (e.g., -Wl, -target, -isystem) which are not supported
-        # by lld-link. clang++ will invoke lld-link (via -fuse-ld=lld) with correct arguments.
-        # This matches the behavior of build.bash ("known toolchain overall invocation patterns").
+        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
         ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" "${POLYFILL_ARGS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
 
         echo "Link complete: $OUTPUT_EXE" >&2
