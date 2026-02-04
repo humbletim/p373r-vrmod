@@ -1,3 +1,5 @@
+see OPENSIMTEST.md for latest instructions
+
 # these might already exist but to make sure run:
 ln -sTf /usr/lib/llvm-19 /opt/humbletim/llvm
 ln -sTf /opt/humbletim/llvm /app/llvm

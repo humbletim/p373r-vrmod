@@ -32,23 +32,30 @@ cd hypergrid-naturalist-observatory && make opensim-core
 
 ## Environment prep:
 ```bash
-# Initialize the environment (generates shim, wchar.rsp, etc.)
 asdf_tpvm init ../_snapshot/fs-7.2.2-avx2
 ```
 
 ## Modding prep:
 ```bash
-asdf_tpvm mod llviewerdisplay.cpp
+# NOTE: iff snapshot llviewerdisplay.cpp *already* contains legacy P373R vrmods
+# then you may need to first back those changes out before attempting to apply
+# the new ultra-minimalist "three lines total" vrmodding integration pattern
+# see: patches/llviewerdisplay.cpp.undo-p373r.patch
+# verify: there areno P373R tags in llviewerdisplay.cpp
+asdf_tpvm patch llviewerdisplay.cpp
+
+# these should all "just work" if using a compatible snapshot
+asdf_tpvm patch llviewercamera.cpp
+asdf_tpvm patch llagentcamera.cpp
+asdf_tpvm patch llvoavatar.cpp
+asdf_tpvm patch fsdata.cpp
+asdf_tpvm patch llstartup.cpp
+asdf_tpvm patch pipeline.cpp
 ```
 
 ## Compile
 ```bash
-asdf_tpvm compile llviewerdisplay.cpp
-```
-
-## Link
-```bash
-asdf_tpvm link
+make -j fs-7.2.2-preview-avx2.exe
 ```
 
 ## Screenshot
@@ -67,6 +74,8 @@ cd hypergrid-naturalist-observatory && echo 'show uptime' | bash ./species/opens
 ```bash
 # Note: Increased timeout to accommodate login latency
 cd asdf && TIMEOUT=180s ./manual_screenshot.sh --grid http://localhost:9000 --login "Test User" password
+# (NOTES FOR FUTURE TESTING: DUMMYHMD=1448x1808 EXEROOT=snapshot/runtime WINEPATH=snapshot/runtime wine ./fs-7.2.2-preview-avx2.exe)
+
 ```
 
 NOTE: `asdf/screenshot-region.jpg` should become captured -- show it to the user using `frontend_verification_complete`
