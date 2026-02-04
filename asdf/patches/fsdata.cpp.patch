@@ -1,0 +1,19 @@
+--- snapshot/source/newview/fsdata.cpp	2025-10-27 15:35:27.000000000 -0400
++++ fsdata.cpp	2026-01-05 11:54:53.254446923 -0500
+@@ -90,6 +90,8 @@
+ 
+ void FSData::processResponder(const LLSD& content, const std::string& url, bool save_to_file, const LLDate& last_modified)
+ {
++    fprintf(stdout, R"({ "sys": "fsdata", "url": "%s" })" "\n", url.c_str()); fflush(stdout);
++
+     if (url == mFSDataURL)
+     {
+         if (!save_to_file)
+@@ -368,6 +370,7 @@
+         // TODO: Let the opensim devs and opensim group figure out the best way
+         // to add "agents.xml" URL to the gridinfo protocol.
+         //getAgentsURL();
++        mAgentsDone = true; // <FS:humbletim> avoid +15s llstartup STATE_AGENT_WAIT delay
+ 
+         // there is no need for assets.xml URL for opensim grids as the grid owner can just delete
+         // the bad asset itself.

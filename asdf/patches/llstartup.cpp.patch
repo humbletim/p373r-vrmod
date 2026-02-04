@@ -1,0 +1,31 @@
+--- snapshot/source/newview/llstartup.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llstartup.cpp	2026-01-25 20:08:09.292138351 -0500
+@@ -1719,12 +1719,14 @@
+ 
+         // This call to LLLoginInstance::connect() starts the
+         // authentication process.
++        fprintf(stdout, "{ \"before-login\": \"%d\" }\n", (LLStartUp::getStartupState()));fflush(stdout);
+         login->connect(gUserCredential);
+ #if defined(OPENSIM) && !defined(SINGLEGRID) // <FS:AW optional opensim support>
+ // <AW: opensim>
+         LLGridManager::getInstance()->saveGridList();
+ // </AW: opensim>
+ #endif // OPENSIM // <FS:AW optional opensim support>
++        fprintf(stdout, "{ \"after-login\": \"%d\" }\n", (LLStartUp::getStartupState()));fflush(stdout);
+         LLStartUp::setStartupState( STATE_LOGIN_CURL_UNSTUCK );
+         return false;
+     }
+@@ -4039,12 +4041,12 @@
+ void LLStartUp::setStartupState( EStartupState state )
+ {
+     LL_INFOS("AppInit") << getStartupStateString() << " --> " << startupStateToString(state) << LL_ENDL;
+-
+     getPhases().stopPhase(getStartupStateString());
+     gStartupState = state;
+     getPhases().startPhase(getStartupStateString());
+ 
+     postStartupState();
++    fprintf(stdout, "{ \"startup\": \"%s\" }\n", startupStateToString(state).c_str());fflush(stdout);
+ }
+ 
+ void LLStartUp::postStartupState()

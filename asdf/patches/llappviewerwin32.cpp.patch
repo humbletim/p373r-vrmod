@@ -1,0 +1,22 @@
+--- snapshot/source/newview/llappviewerwin32.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llappviewerwin32.cpp	2026-01-20 01:19:54.270574513 -0500
+@@ -249,6 +249,7 @@
+     void (*gOldTerminateHandler)() = NULL;
+ }
+ 
++extern bool ll_get_stack_trace(std::vector<std::string>& lines);
+ static void exceptionTerminateHandler()
+ {
+     // reinstall default terminate() handler in case we re-terminate.
+@@ -256,6 +257,11 @@
+     // treat this like a regular viewer crash, with nice stacktrace etc.
+     long *null_ptr;
+     null_ptr = 0;
++    fprintf(stdout, "DEADBEEFING\n");fflush(stdout);
++    std::vector<std::string> stack_lines; ll_get_stack_trace(stack_lines);
++    for (const auto& line : stack_lines) fprintf(stdout, "%s\n", line.c_str());
++    fflush(stdout);
++
+     *null_ptr = 0xDEADBEEF; //Force an exception that will trigger breakpad.
+ 
+     // we've probably been killed-off before now, but...

@@ -1,0 +1,19 @@
+--- snapshot/source/newview/llviewercamera.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llviewercamera.cpp	2026-01-26 13:29:09.650149551 -0500
+@@ -185,6 +185,7 @@
+     F32 z_far = far_distance;
+     F32 z_near = getNear();
+     F32 aspect = getAspect();
++    if (vrmod_LLViewerCamera_assignProjection(fov_y, aspect, z_near, z_far, mProjectionMatrix.mMatrix)) return;
+ 
+     F32 f = 1 / tan(fov_y * 0.5f);
+ 
+@@ -374,7 +375,7 @@
+ 
+     calcProjection(z_far); // Update the projection matrix cache
+ 
+-    proj_mat *= glm::perspective(fov_y,aspect,z_near,z_far);
++    proj_mat *= vrmod_LLViewerCamera_perspective(fov_y,aspect,z_near,z_far);
+ 
+     gGL.loadMatrix(glm::value_ptr(proj_mat));
+ 

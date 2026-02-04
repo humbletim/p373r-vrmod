@@ -1,0 +1,45 @@
+--- snapshot/source/llwindow/llwindowwin32.cpp	2025-10-27 15:35:26.000000000 -0400
++++ llwindowwin32.cpp	2026-02-03 01:26:33.643058267 -0500
+@@ -904,10 +904,32 @@
+     mWindowThread = NULL;
+ }
+ 
++extern U64MicrosecondsImplicit  gStartTime;
++namespace {
++    bool MySetFocus(const char* hint, HWND hwnd) {
++        bool isWithinFirst20Seconds = ((U64)totalTime() - (U64)gStartTime) < 20 * USEC_PER_SEC;
++        if (isWithinFirst20Seconds) {
++            fprintf(stdout, "[%s] SetFocus %p -- blocking (within first 20 seconds!)\n", hint, hwnd);fflush(stdout);
++            return true;
++        }
++        return ::SetFocus(hwnd);
++    }
++    bool MySetForegroundWindow(const char* hint, HWND hwnd) {
++        bool isWithinFirst20Seconds = ((U64)totalTime() - (U64)gStartTime) < 20 * USEC_PER_SEC;
++        if (isWithinFirst20Seconds) {
++            fprintf(stdout, "[%s] SetForegroundWindow %p -- blocking (within first 20 seconds!)\n", hint, hwnd);fflush(stdout);
++            return true;
++        }
++        return ::SetForegroundWindow(hwnd);
++    }
++}
++#define SetFocus(x) MySetFocus(__FUNCTION__, x)
++#define SetForegroundWindow(x) MySetForegroundWindow(__FUNCTION__, x)
++
+ void LLWindowWin32::show()
+ {
+     LL_DEBUGS("Window") << "Setting window to show" << LL_ENDL;
+-    ShowWindow(mWindowHandle, SW_SHOW);
++    ShowWindow(mWindowHandle, SW_SHOWNA);
+     SetForegroundWindow(mWindowHandle);
+     SetFocus(mWindowHandle);
+ }
+@@ -3803,7 +3825,7 @@
+         TEXT("SPLASHSCREEN"),
+         NULL,   // no parent
+         (DLGPROC) LLSplashScreenWin32::windowProc);
+-    ShowWindow(mWindow, SW_SHOW);
++    ShowWindow(mWindow, SW_SHOWNA);
+ 
+     // Should set taskbar text without creating a header for the window (caption)
+     SetWindowTextA(mWindow, APP_NAME.c_str());

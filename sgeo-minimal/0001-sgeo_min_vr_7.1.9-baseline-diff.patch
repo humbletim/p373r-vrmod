@@ -1,5 +1,5 @@
---- fs-7.1.13-devtime-avx2/source/newview/llviewerdisplay.cpp	2025-08-03 12:31:15.000000000 -0400
-+++ sgeo-minimal-vrmod.llviewerdisplay.cpp	2025-08-04 02:04:36.556753400 -0400
+--- fs-7.2.2-preview-devtime-noavx/source/newview/llviewerdisplay.cpp	2025-10-17 19:50:32.847253600 +0000
++++ sgeo-min/llviewerdisplay.cpp	2025-10-22 02:32:46.309799800 +0000
 @@ -26,6 +26,11 @@
  
  #include "llviewerprecompiledheaders.h"
@@ -12,7 +12,7 @@
  #include "llviewerdisplay.h"
  
  #include "fsyspath.h"
-@@ -832,6 +837,12 @@
+@@ -833,6 +838,12 @@
              gPipeline.toggleRenderType(LLPipeline::RENDER_TYPE_HUD_PARTICLES);
          }
  
@@ -25,11 +25,10 @@
          stop_glerror();
          display_update_camera();
          stop_glerror();
-@@ -1154,7 +1165,29 @@
+@@ -1152,7 +1163,29 @@
          if (!for_snapshot)
          {
              render_ui();
--            swap();
 +			//################################### P373R ######################################
 +			gVR.vrDisplay();
 +
@@ -48,7 +47,7 @@
 +
 +			}
 +			if (!gVR.m_bVrActive)
-+ 			swap();
+             swap();
 +
 +			//################################### END P373R ##################################
 +			//swap();
@@ -56,34 +55,34 @@
          }
  
  
-@@ -1787,6 +1820,10 @@
+@@ -1782,6 +1815,10 @@
      gUIProgram.bind();
-     gGL.color4f(1, 1, 1, 1);
+     gGL.color4f(1.f, 1.f, 1.f, 1.f);
  
 +	//################################### P373R ######################################
 +	gVR.RenderControllerAxes();
 +	//################################### END P373R ##################################
 +
      // Coordinate axes
-     // <FS:Ansariel> gSavedSettings replacement
-     //if (gSavedSettings.getBOOL("ShowAxes"))
-@@ -1939,6 +1976,9 @@
+     static LLCachedControl<bool> show_axes(gSavedSettings, "ShowAxes");
+     if (show_axes())
+@@ -1929,6 +1966,10 @@
          gViewerWindow->draw();
      }
  
 +	//################################### P373R ######################################
 +	gVR.DrawCursors();
 +	//################################### END P373R ##################################
- 
- 
++
      // reset current origin for font rendering, in case of tiling render
-@@ -2024,6 +2064,9 @@
+     LLFontGL::sCurOrigin.set(0, 0);
+ }
+@@ -2012,5 +2053,8 @@
  
  void display_cleanup()
  {
 +	//################################### P373R ######################################
 +	gVR.vrStartup(TRUE);
 +	//################################### END P373R ######################################
-     gDisconnectedImagep = NULL;
+     gDisconnectedImagep = nullptr;
  }
- 
