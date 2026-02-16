@@ -32,7 +32,7 @@ function provision_openvr() {(
     cp -av ../openvr_api.viewer_manifest.patch lib/release/
     # openvr repo is hundreds of megabytes... we just need headers, win64 .lib and win64 .dll
     ovr=https://rawcdn.githack.com/ValveSoftware/openvr/$tag
-    function _wget() { echo "fetching $@" >&2 ; wget -nv -nc "$@" ; }
+    function _wget() { echo "fetching $@" >&2 ; /usr/bin/wget -nv -nc "$@" ; }
     _wget -O LICENSES/openvr.txt $ovr/LICENSE
     _wget -O include/openvr.h $ovr/headers/openvr.h
     _wget -P lib/release/ $ovr/bin/win64/openvr_api.dll $ovr/lib/win64/openvr_api.lib
