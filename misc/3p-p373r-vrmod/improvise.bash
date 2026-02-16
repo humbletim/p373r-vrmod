@@ -27,7 +27,7 @@ function provision_p373r_vrmod() {(
     set -Eou pipefail
     cd stage
     mkdir -pv LICENSES # lib/release include 
-    cp -av p373r-vrmod.txt LICENSES/p373r-vrmod.txt
+    cp -av ../p373r-vrmod.txt LICENSES/p373r-vrmod.txt
   )
 
   FILES=(
