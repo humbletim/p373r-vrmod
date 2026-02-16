@@ -5,7 +5,7 @@ openvr_dir=$(dirname "${BASH_SOURCE}")
 function verify_openvr_from_packages_json() {
   local tarball=$1 json=${2:-$1.json}
   jq --arg tarball "$tarball" -r '.openvr.hash + "\t" + $tarball' $json \
-    | tr -d '\r' | tee /dev/stderr | md5sum --strict --check
+    | tr -d '\r' | md5sum --strict --check
 }
 
 function provision_openvr() {(
