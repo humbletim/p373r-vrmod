@@ -38,13 +38,12 @@ provision_openvr_api() {(
    autobuild-package.xml
    LICENSES/openvr_api.txt
    include/openvr.h
-   include/openvr_api/headers/openvr.h
   )
 
   for x in ${FILES[@]} ; do test -s stage/$x || { echo "'$x' invalid" >&2 ; exit 38 ; } ; done || return 61
 
   #set -x
-  tar --force-local -C stage -cjvf $tarball ${FILES[@]} || return 62
+  tar --force-local -C stage -cjvf $tarball ${FILES[@]} include/openvr_api/* || return 62
 
   hash=($(md5sum $tarball))
   url="file:///$tarball"
