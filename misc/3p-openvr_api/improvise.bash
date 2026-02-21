@@ -27,8 +27,8 @@ provision_openvr_api() {(
   mkdir -pv stage/include/openvr_api stage/LICENSES
 
   # openvr repo is hundreds of megabytes... we just need LICENSE, openvr.h and src for static embedding
-  git clone https://github.com/ValveSoftware/openvr --branch v1.6.10 --single-branch --depth 1 --filter=blob:none --sparse
-  git -C openvr sparse-checkout set headers src
+  git clone https://github.com/ValveSoftware/openvr --branch v1.6.10 --single-branch --depth 1 --filter=blob:none --sparse || true
+  git -C openvr sparse-checkout set headers src || true
   ( cd openvr && cp --parents -av {LICENSE,headers/openvr.h} src/{,**/}{*.h,*.cpp} ../stage/include/openvr_api/ )
   
   cp -av stage/include/openvr_api/LICENSE stage/LICENSES/openvr_api.txt
