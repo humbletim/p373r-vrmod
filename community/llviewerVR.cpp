@@ -21,9 +21,9 @@
 #include <vector>
 //#include "llrender.h"
 
-#ifdef _WIN32
-#pragma comment(lib, "openvr_api")
-#endif
+// #ifdef _WIN32
+// #pragma comment(lib, "openvr_api")
+// #endif
 
 #ifndef _WIN32
 #define sprintf_s(buffer, buffer_size, stringbuffer, ...) (sprintf(buffer, stringbuffer, __VA_ARGS__))

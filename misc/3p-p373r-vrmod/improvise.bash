@@ -26,15 +26,17 @@ function provision_p373r_vrmod() {(
   (
     set -Eou pipefail
     cd stage
-    mkdir -pv LICENSES # lib/release include 
+    mkdir -pv LICENSES include # lib/release include 
     cp -av ../p373r-vrmod.txt LICENSES/p373r-vrmod.txt
+    cp -av ../../../community/llviewerVR*.* include/ #p373r-vrmod/
   )
 
   FILES=(
    autobuild-package.xml
    LICENSES/p373r-vrmod.txt
-   # include/openvr.h
-   # lib/release/vrmod_api.{dll,lib}
+   include/llviewerVR.h
+   include/llviewerVR.cpp
+   include/llviewerVR.vrmod_settings.c++
   )
 
   for x in ${FILES[@]} ; do test -s stage/$x || { echo "'$x' invalid" >&2 ; exit 38 ; } ; done || return 61

@@ -1,5 +1,6 @@
 #pragma once
 
+#define OPENVR_API_IMPLEMENTATION
 #include "openvr.h"
 #include "glh/glh_linear.h"
 #include "llhudtext.h"
