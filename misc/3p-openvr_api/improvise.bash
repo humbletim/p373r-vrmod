@@ -38,7 +38,7 @@ provision_openvr_api() {(
    autobuild-package.xml
    LICENSES/openvr_api.txt
    include/openvr.h
-   include/openvr_api/
+   include/openvr_api/headers/openvr.h
   )
 
   for x in ${FILES[@]} ; do test -s stage/$x || { echo "'$x' invalid" >&2 ; exit 38 ; } ; done || return 61
