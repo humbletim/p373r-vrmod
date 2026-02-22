@@ -12,16 +12,20 @@
 #endif
 
 // ===========================================================================
-#ifndef OPENVR_API_H
-#define OPENVR_API_H
+#ifndef OPENVR_API_OPENVR_H
+#define OPENVR_API_OPENVR_H
+#pragma message("hi there OPENVR_BUILD_STATIC")
   #define OPENVR_BUILD_STATIC
   #define VR_API_PUBLIC
+  #define WIN64
   #pragma include_alias("openvr.h", "openvr_api/headers/openvr.h")
-  #include "openvr.h"
-#endif // OPENVR_API_H
+  #include "openvr_api/headers/openvr.h"
+#endif // OPENVR_API_OPENVR_H
 
 // ===========================================================================
 #ifdef OPENVR_API_IMPLEMENTATION
+#pragma message("hi there OPENVR_API_IMPLEMENTATION")
+
   #pragma include_alias("pathtools_public.h",      "openvr_api/src/vrcommon/pathtools_public.h")
   #pragma include_alias("sharedlibtools_public.h", "openvr_api/src/vrcommon/sharedlibtools_public.h")
   #pragma include_alias("envvartools_public.h",    "openvr_api/src/vrcommon/envvartools_public.h")
@@ -35,8 +39,13 @@
   #include "openvr_api/src/vrcommon/envvartools_public.cpp"
   #include "openvr_api/src/vrcommon/hmderrors_public.cpp"
   #include "openvr_api/src/vrcommon/pathtools_public.cpp"
-  #include "openvr_api/src/vrcommon/sharedlibtools_public.cpp"
   #include "openvr_api/src/vrcommon/strtools_public.cpp"
   #include "openvr_api/src/vrcommon/vrpathregistry_public.cpp"
   #include "openvr_api/src/jsoncpp.cpp"
+
+#define LoadLibraryExW(a,b,c) LoadLibraryExA(a,b,c)
+  #include "openvr_api/src/vrcommon/sharedlibtools_public.cpp"
+#undef LoadLibraryExW
+
+
 #endif // OPENVR_API_IMPLEMENTATION
