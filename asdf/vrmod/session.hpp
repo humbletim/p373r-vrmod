@@ -1222,5 +1222,5 @@ if (gVrModSettings->handlasers)
 } //ns
 
 #elif __INCLUDE_LEVEL__ == 0
-    #error "TPVM_RECIPE: -xc++ -DHUMBLETIM_VRMOD_IMPLEMENTATION"
+    #error "TPVM_RECIPE: -xc++ -UUNICODE -DHUMBLETIM_VRMOD_IMPLEMENTATION"
 #endif

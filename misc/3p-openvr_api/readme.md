@@ -1,21 +1,24 @@
-### 3p-openvr helper stub
+### 3p-openvr_api helper stub
 
-improvise.bash emerges an LL autobuild compatible openvr-vX.Y.Z.sha.tar.bz2 containing:
+improvise.bash emerges an LL autobuild compatible static openvr_api-vX.Y.Z.sha.tar.bz2 containing:
   - autobuild-package.xml
-  - LICENSES/openvr.txt
+  - LICENSES/openvr_api.txt
+  - include/openvr_api/{headers,src}/*
   - include/openvr.h
-  - lib/release/openvr_api.{dll,lib,viewer_manifest.patch}
 
-NOTE: this 3p stuff is only needed if wanting to integrate as part of autobuild.xml configuration
+include/openvr.h is a special single-file header amalgamating wrapper:
+  - include like openvr.h when wanting OpenVR declarations 
+  - (in one code unit) define `OPENVR_API_IMPLEMENTATION` first before including
+    - NOTE: this avoids depending on / shipping a separate openvr_api.dll!
 
 to execute from a git+windows bash prompt for local development:
 ```sh
-bash -c '. improvise.bash ; provision_openvr [output_dir]'
+bash -c '. improvise.bash ; provision_openvr_api [output_dir]'
 ```
 
 generated package could then be added as a custom SLOS/TPV 3p dependency using LL autobuild tool:
 ```sh
-autobuild installables edit --archive [output_dir]/openvr-vX.Y.Z.sha.tar.bz2
+autobuild installables edit --archive [output_dir]/openvr_api-vX.Y.Z.sha.tar.bz2
 ```
 
 see also:

@@ -1,1 +1,1 @@
--DUNICODE -Wno-deprecated-this-capture -Wno-delete-incomplete
+-DUNICODE -Wno-deprecated-this-capture -Wno-delete-incomplete -isystem .

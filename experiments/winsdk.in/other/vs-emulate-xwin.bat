@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-FOR /F "tokens=*" %%g IN ('bash -c "cygpath -ms /c/Program\ File*/Microsoft\ Visual\ Studio/*/*/Common7/Tools/VsDevCmd.bat|sort -r|head -1"') DO (
+FOR /F "tokens=*" %%g IN ('bash -c "cygpath -ms /c/Program\ File*/Microsoft\ Visual\ Studio/*/*/Common7/Tools/VsDevCmd.bat|sort -h|head -1"') DO (
     SET "vsdevcmd=%%g"
 )
 

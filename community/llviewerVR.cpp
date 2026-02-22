@@ -1,4 +1,6 @@
-﻿#include "llviewerprecompiledheaders.h"
+﻿#define OPENVR_API_IMPLEMENTATION
+#include "openvr.h"
+#include "llviewerprecompiledheaders.h"
 #include "llviewerVR.h"
 #include "llviewerwindow.h"
 #include <string>
@@ -22,7 +24,7 @@
 //#include "llrender.h"
 
 #ifdef _WIN32
-#pragma comment(lib, "openvr_api")
+//#pragma comment(lib, "openvr_api")
 #endif
 
 #ifndef _WIN32

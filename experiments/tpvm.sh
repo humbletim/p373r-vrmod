@@ -139,36 +139,36 @@ case "$CMD" in
 
         echo "$BASE" > env/base_name
 
-        # Create llpreprocessor_shim.h in env
-        cat <<EOF > env/llpreprocessor_shim.h
-#ifdef __clang__
-#undef __clang__
-#define __RESTORE_CLANG__
-#endif
+#         # Create llpreprocessor_shim.h in env
+#         cat <<EOF > env/llpreprocessor_shim.h
+# #ifdef __clang__
+# #undef __clang__
+# #define __RESTORE_CLANG__
+# #endif
 
-// Prevent Boost from specializing for wchar_t since it's now unsigned short
-#define BOOST_NO_INTRINSIC_WCHAR_T 1
+# // Prevent Boost from specializing for wchar_t since it's now unsigned short
+# #define BOOST_NO_INTRINSIC_WCHAR_T 1
 
-#include <llpreprocessor.h>
+# #include <llpreprocessor.h>
 
-#ifdef __RESTORE_CLANG__
-#define __clang__ 1
-#undef __RESTORE_CLANG__
-#endif
-EOF
-        # Generate wchar.rsp
-        # -Xclang -fno-wchar: Treat wchar_t as unsigned short (MSVC compat)
-        # -fms-extensions: Enable MS extensions
-        # -include env/llpreprocessor_shim.h: Sandwich llpreprocessor.h to hide __clang__ during its inclusion
-        (
-            echo ""
-            echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
-            echo ""
-            EXTRA_INCS="-I. -isystemsnapshot/source"
-            echo "$EXTRA_INCS"
-        ) >> env/compile.rsp
+# #ifdef __RESTORE_CLANG__
+# #define __clang__ 1
+# #undef __RESTORE_CLANG__
+# #endif
+# EOF
+#         # Generate wchar.rsp
+#         # -Xclang -fno-wchar: Treat wchar_t as unsigned short (MSVC compat)
+#         # -fms-extensions: Enable MS extensions
+#         # -include env/llpreprocessor_shim.h: Sandwich llpreprocessor.h to hide __clang__ during its inclusion
+#         (
+#             echo ""
+#             echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
+#             echo ""
+#             EXTRA_INCS="-I. -isystemsnapshot/source"
+#             echo "$EXTRA_INCS"
+#         ) >> env/compile.rsp
 
-        echo "Created env/llpreprocessor_shim.h shim and appended env/compile.rsp to utilize."
+#         echo "Created env/llpreprocessor_shim.h shim and appended env/compile.rsp to utilize."
 
         echo "Init complete."
         ;;
@@ -565,8 +565,8 @@ EOF
 
                 # echo "Compiling $FILE... $POLYFILL $HEADER_OPTS" >&2
                 
-                echo ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ" >&2
-                ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ"
+                echo LIB= ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ" >&2
+                LIB= ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ"
             fi
         done
         ;;
@@ -648,8 +648,8 @@ EOF
 
         echo "Linking $OUTPUT_EXE..." >&2
 
-        echo "./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
-        ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" "${POLYFILL_ARGS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
+        echo "LIB= ./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
+        LIB= ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" "${POLYFILL_ARGS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
 
         echo "Link complete: $OUTPUT_EXE" >&2
         ;;

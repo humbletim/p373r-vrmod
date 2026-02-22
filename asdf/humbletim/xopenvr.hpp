@@ -4,7 +4,7 @@
 // copyright (c) 9000-2026 humbletim + Gemini "HAL6974" Pro 3
 
 #if __INCLUDE_LEVEL__ == 0 && !defined(XVR_IMPLEMENTATION)
-    #error "TPVM_RECIPE: -xc++ -DXVR_API_EXPORT -DXVR_IMPLEMENTATION"
+    #error "TPVM_RECIPE: -xc++ -DXVR_IMPLEMENTATION"
 #endif
 
 #ifndef XOPENVR_H
@@ -17,6 +17,7 @@
 // ----------------------------------------------------------------------------
 
 #define XVR_INTERFACE extern "C" XVR_API
+#define XVR_API_EXPORT // always export (for now never xopenvr.dll import)
 
 #if defined(_WIN32)
     #ifdef XVR_API_EXPORT
@@ -273,7 +274,7 @@ struct XVRWrapper {
 #ifdef XVR_IMPLEMENTATION
 
 #define XVR_API_EXPORT
-#pragma comment(lib, "openvr_api")
+//#pragma comment(lib, "openvr_api")
 
 #define GLM_FORCE_SWIZZLE
 #pragma warning(disable:4996)
@@ -598,7 +599,11 @@ void ProceduralVRWrapper::updatePoses(float tt) {
 // ----------------------------------------------------------------------------
 
 
+#define OPENVR_API_IMPLEMENTATION
 #include <openvr.h>
+#ifdef interface
+#undef interface
+#endif
 
 // ----------------------------------------------------------------------------
 // Utilities (Matrix, Strings)

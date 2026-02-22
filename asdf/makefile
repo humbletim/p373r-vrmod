@@ -1,5 +1,5 @@
 # Placeholder for your executable name
-TARGET = fs-7.2.2-preview-avx2.exe
+TARGET = fs-7.2.3-avx2.exe
 
 # Compiler and Shell script wrapper
 CXX = ../experiments/tpvm.sh compile
@@ -7,9 +7,9 @@ LD  = ../experiments/tpvm.sh link
 
 # Build flags
 CXXFLAGS = -g -w
-LDFLAGS  = -g -Wl,/demangle
+LDFLAGS  = -g -Wl,/demangle:no
 
-override CXXFLAGS += -MMD -MP
+override CXXFLAGS += -MMD -MP -I.
 
 VRMOD_SOURCES = $(addprefix vrmod/, \
        llviewerdisplay.hpp \
@@ -25,6 +25,8 @@ HT_SOURCES = $(addprefix humbletim/, \
         win32.desktop.hpp \
         opengl.hpp \
 )
+#HT_SOURCES += humbletim/static_openvr_api.hpp
+
 # override CXXFLAGS += -Ihumbletim/
 
 TPV_SOURCES = \
@@ -32,7 +34,6 @@ TPV_SOURCES = \
        llagentcamera.cpp \
        llviewerdisplay.cpp \
        llvoavatar.cpp \
-       fsdata.cpp \
        llstartup.cpp \
        pipeline.cpp
 

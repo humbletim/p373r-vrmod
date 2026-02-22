@@ -1,1 +1,1 @@
--include vrmod/llviewerdisplay.hpp
+-I../community -include vrmod/llviewerdisplay.hpp

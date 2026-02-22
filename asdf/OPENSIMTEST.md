@@ -35,6 +35,14 @@ cd hypergrid-naturalist-observatory && make opensim-core
 asdf_tpvm init ../_snapshot/fs-7.2.2-avx2
 ```
 
+<!-- ALTERNATIVE for original P373R vrmod:
+asdf_tpvm mod llviewerdisplay.cpp
+patch --directory=. --merge <  ../sgeo-minimal/0001-sgeo_min_vr_7.1.9-baseline-diff.patch
+asdf_tpvm compile llviewerdisplay.cpp
+asdf_tmp link
+# produces fs-open.exe w/community vrmod edition changes
+-->
+
 ## Modding prep:
 ```bash
 # NOTE: iff snapshot llviewerdisplay.cpp *already* contains legacy P373R vrmods
@@ -48,7 +56,7 @@ asdf_tpvm patch llviewerdisplay.cpp
 asdf_tpvm patch llviewercamera.cpp
 asdf_tpvm patch llagentcamera.cpp
 asdf_tpvm patch llvoavatar.cpp
-asdf_tpvm patch fsdata.cpp
+# asdf_tpvm patch fsdata.cpp
 asdf_tpvm patch llstartup.cpp
 asdf_tpvm patch pipeline.cpp
 ```
