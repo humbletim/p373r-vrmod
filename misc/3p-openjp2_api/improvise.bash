@@ -12,7 +12,7 @@ provision_openjpeg_dummy() {(
   local cache_dir="$1"
   test -d "$cache_dir" || { echo "env cache_dir('$cache_dir') not found" >&2 ; return 15 ; }
 
-  mkdir -p /tmp/openjpeg-dummy/LICENSES  
+  mkdir -p /tmp/openjpeg-dummy/LICENSES  /tmp/openjpeg-dummy/lib/release
   cat > /tmp/openjpeg-dummy/autobuild-package.xml <<'EOF'  
   <?xml version="1.0"?>  
 <llsd>
@@ -25,6 +25,7 @@ provision_openjpeg_dummy() {(
     <array>
       <string>LICENSES/openjpeg.txt</string>
       <string>lib/release/openjp2.lib</string>
+      <string>lib/release/openjp2.dll</string>
     </array>
     <key>package_description</key>
     <map>
@@ -51,7 +52,8 @@ provision_openjpeg_dummy() {(
 </llsd>
 EOF
   echo "dummy" > /tmp/openjpeg-dummy/LICENSES/openjpeg.txt  
-  llvm-lib -llvmlibempty -out:stage/lib/release/openjp2.lib
+  llvm-lib -llvmlibempty -out:/tmp/openjpeg-dummy/lib/release/openjp2.lib
+  touch /tmp/openjpeg-dummy/lib/release/openjp2.dll
   ( cd /tmp/openjpeg-dummy/ && tar -cjf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 * )
   tar tvf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 >&2
   echo "$cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 created if dummy/placeholder for original openjpeg autobuild is needed..." >&2
