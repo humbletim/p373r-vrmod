@@ -8,6 +8,54 @@ function verify_openjp2_from_packages_json() {
     | tr -d '\r' | tee /dev/stderr | md5sum --strict --check
 }
 
+provision_openjpeg_dummy() {(
+  local cache_dir="$1"
+  test -d "$cache_dir" || { echo "env cache_dir('$cache_dir') not found" >&2 ; return 15 ; }
+
+  mkdir -p /tmp/openjpeg-dummy/LICENSES  
+  cat > /tmp/openjpeg-dummy/autobuild-package.xml <<'EOF'  
+  <?xml version="1.0"?>  
+<llsd>
+<map>
+    <key>build_id</key>
+    <string>1</string>
+    <key>configuration</key>
+    <string>default</string>
+    <key>manifest</key>
+    <array>
+      <string>LICENSES/openjpeg.txt</string>
+    </array>
+    <key>package_description</key>
+    <map>
+      <key>copyright</key>
+      <string>no-op placeholder (see openjp2_api)</string>
+      <key>description</key>
+      <string>openjpeg-dummy (see openjp2_api which is used instead)</string>
+      <key>license</key>
+      <string>BSD</string>
+      <key>license_file</key>
+      <string>LICENSES/openjpeg.txt</string>
+      <key>name</key>
+      <string>openjpeg</string>
+      <key>version</key>
+      <string>1</string>
+    </map>
+    <key>platform</key>
+    <string>windows64</string>
+    <key>type</key>
+    <string>metadata</string>
+    <key>version</key>
+    <string>1</string>
+  </map>
+</llsd>
+EOF
+  echo "dummy" > /tmp/openjpeg-dummy/LICENSES/openjpeg.txt  
+  ( cd /tmp/openjpeg-dummy/ && tar -cjf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 * )
+  tar tvf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 >&2
+  echo "$cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 created if dummy/placeholder for original openjpeg autobuild is needed..." >&2
+  return 0
+)}
+
 provision_openjp2() {(
   set -Euo pipefail
   local cache_dir="$1"
@@ -29,6 +77,7 @@ provision_openjp2() {(
   # openvr repo is hundreds of megabytes... we just need LICENSE, openvr.h and src for static embedding
 
 test -s openjpeg/src/lib/openjpeg.h || (
+    export MSYS_NO_PATHCONV=1
     mkdir openjpeg
     cd openjpeg
     git init --initial-branch main
