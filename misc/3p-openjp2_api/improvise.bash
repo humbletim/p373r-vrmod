@@ -5,7 +5,7 @@ openjp2_dir=$(dirname "${BASH_SOURCE}")
 function verify_openjp2_from_packages_json() {
   local tarball=$1 json=${2:-$1.json}
   jq --arg tarball "$tarball" -r '.openjp2_api.hash + "\t" + $tarball' $json \
-    | tr -d '\r' | tee /dev/stderr | md5sum --strict --check
+    | tr -d '\r' | md5sum --strict --check
 }
 
 provision_openjpeg_dummy() {(
