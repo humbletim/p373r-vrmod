@@ -24,6 +24,7 @@ provision_openjpeg_dummy() {(
     <key>manifest</key>
     <array>
       <string>LICENSES/openjpeg.txt</string>
+      <string>lib/release/openjp2.lib</string>
     </array>
     <key>package_description</key>
     <map>
@@ -50,6 +51,7 @@ provision_openjpeg_dummy() {(
 </llsd>
 EOF
   echo "dummy" > /tmp/openjpeg-dummy/LICENSES/openjpeg.txt  
+  llvm-lib -llvmlibempty -out:stage/lib/release/openjp2.lib
   ( cd /tmp/openjpeg-dummy/ && tar -cjf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 * )
   tar tvf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 >&2
   echo "$cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 created if dummy/placeholder for original openjpeg autobuild is needed..." >&2
