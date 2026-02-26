@@ -52,7 +52,8 @@ provision_openjpeg_dummy() {(
 </llsd>
 EOF
   echo "dummy" > /tmp/openjpeg-dummy/LICENSES/openjpeg.txt  
-  llvm-lib -llvmlibempty -out:/tmp/openjpeg-dummy/lib/release/openjp2.lib
+  # llvm-lib -llvmlibempty -out:/tmp/openjpeg-dummy/lib/release/openjp2.lib
+  echo 'void __dummy(void){}' > /tmp/openjpeg-dummy.c && clang-cl -c /tmp/openjpeg-dummy.c && llvm-lib -out:/tmp/openjpeg-dummy/lib/release/openjp2.lib dummy.obj
   touch /tmp/openjpeg-dummy/lib/release/openjp2.dll
   ( cd /tmp/openjpeg-dummy/ && tar -cjf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 * )
   tar tvf $cache_dir/openjpeg-v0.0.0-common-dummy.tar.bz2 >&2
