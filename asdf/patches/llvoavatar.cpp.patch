@@ -1,0 +1,11 @@
+--- snapshot/source/newview/llvoavatar.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llvoavatar.cpp	2026-02-02 21:54:08.002206280 -0500
+@@ -6076,6 +6076,8 @@
+     {
+         return num_indices;
+     }
++    extern void tweak_llvoavatar_pose(LLVOAvatar*);  
++    tweak_llvoavatar_pose(this);  
+ 
+     LLFace* face = mDrawable->getFace(0);
+ 

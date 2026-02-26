@@ -1,0 +1,660 @@
+#!/bin/bash
+set -euo pipefail
+
+# tpvm.sh - Deterministic Build Driver
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+fail() { echo "$@" >&2; exit 1; }
+
+usage() {
+    echo "tpvm.sh - Deterministic Build Driver"
+    echo ""
+    echo "Usage: $0 <command> [arguments]"
+    echo ""
+    echo "Commands:"
+    echo "  init <snapshot_dir>   Initialize environment with snapshot."
+    echo "  mod <filename>        Copy file from snapshot to local directory."
+    echo "  diff <filename>       Diff local file against snapshot."
+    echo "  status [overrides]    Show status of local files. 'overrides' lists only overridden filenames."
+    echo "  compile [files...]    Compile specific .cpp files (defaults to *.cpp)."
+    echo "  compile_ <basename>   Smart compile: checks dependencies and mtime."
+    echo "  mergetool <basename>  Run meld on snapshot vs local file."
+    echo "  patch <basename>      Safely apply patch (create if missing, verify, apply, rollback on fail)."
+    echo "  link                  Link the application using local objects."
+    echo ""
+    echo "Examples:"
+    echo "  $0 init _snapshot/fs-7.2.2-avx2"
+    echo "  $0 mod llstartup.cpp"
+    echo "  $0 status"
+    echo "  $0 compile llstartup.cpp"
+    echo "  $0 link"
+    exit 1
+}
+
+if [[ "${1:-}" == "--help" ]] || [[ -z "${1:-}" ]]; then
+    usage
+fi
+
+CMD=${1:-}
+shift || true
+
+case "$CMD" in
+    init)
+        SNAPSHOT_ARG=${1:-}
+        if [ -z "$SNAPSHOT_ARG" ]; then
+             # Try to find one in repo root _snapshot
+             SNAPSHOT_ARG=$(find "$REPO_ROOT/_snapshot" -maxdepth 1 \( -type d -o -xtype d \) -name "fs-*" | head -n 1)
+             test -n "$SNAPSHOT_ARG" || fail "Usage: $0 init <snapshot_dir> (and no fs-* snapshot found in _snapshot)"
+        fi
+
+        # Resolve absolute path of snapshot_dir if relative
+        if [[ "$SNAPSHOT_ARG" != /* ]]; then
+            # Check if it is relative to CWD
+            if [ -d "$SNAPSHOT_ARG" ]; then
+                SNAPSHOT_ARG="$(cd "$SNAPSHOT_ARG" && pwd)"
+            elif [ -d "$REPO_ROOT/$SNAPSHOT_ARG" ]; then
+                SNAPSHOT_ARG="$(cd "$REPO_ROOT/$SNAPSHOT_ARG" && pwd)"
+            else
+                fail "Snapshot directory not found: $SNAPSHOT_ARG"
+            fi
+        fi
+
+        test -d "$SNAPSHOT_ARG" || fail "Snapshot directory not found: $SNAPSHOT_ARG"
+
+        echo "Initializing with snapshot: $SNAPSHOT_ARG"
+
+        # Verify llvm
+        LLVM_DIR="$REPO_ROOT/llvm"
+        test -d "$LLVM_DIR" || fail "LLVM toolchain not found at $LLVM_DIR"
+
+        # Symlinks in CWD
+        ln -sfn "$LLVM_DIR" llvm
+        ln -sfn "$SNAPSHOT_ARG" snapshot
+
+        mkdir -p env
+
+        # Local winsdk setup to hold generated rsp files while symlinking heavy artifacts
+        mkdir -p winsdk
+        ln -sfn "$REPO_ROOT/winsdk/crt" winsdk/crt
+        ln -sfn "$REPO_ROOT/winsdk/sdk" winsdk/sdk
+
+        # Merge vfsoverlay
+        jq -s ".[0] * { roots: (.[0].roots + .[1].roots) }" \
+            "$REPO_ROOT/experiments/winsdk.in/vfsoverlay.extra.json" \
+            "$REPO_ROOT/winsdk/vfsoverlay.json" > winsdk/_vfsoverlay.json
+
+        # Determine base
+        SNAPSHOT_NAME=$(basename "$SNAPSHOT_ARG")
+        # Assuming name format like fs-7.2.2-avx2 or similar
+        BASE=$SNAPSHOT_NAME
+
+        # Set variables for envsubst
+        # We use relative paths for variables where possible/expected by rsp
+        export snapshot_dir="snapshot"
+        export winsdk="winsdk"
+        export devtime="env"
+        export base="$BASE"
+
+        # Find _llvm include path
+        # Assuming llvm is symlinked in CWD now
+        _LLVM_INC=$(find llvm/lib/clang -path '*/include' -type d | head -n 1)
+        if [ -z "$_LLVM_INC" ]; then
+             fail "Could not find llvm include directory"
+        fi
+        export _llvm="$_LLVM_INC"
+
+        TEMPLATES_DIR="$REPO_ROOT/experiments/fs/devtime.in"
+
+        echo "Generating environment files in env/..."
+
+        # Helper to subst
+        subst() {
+            envsubst '$base $snapshot_dir $devtime $winsdk $_llvm' < "$1" > "$2"
+        }
+
+        # Generate winsdk rsp files
+        subst "$REPO_ROOT/experiments/winsdk.in/winsdk.rsp" "winsdk/winsdk.rsp"
+        subst "$REPO_ROOT/experiments/winsdk.in/mm.rsp" "winsdk/mm.rsp"
+
+        subst "snapshot/llobjs.rsp.in" "env/llobjs.rsp"
+        subst <(sed -e 's@^-I@-isystem@g' "snapshot/llincludes.rsp.in") "env/llincludes.rsp"
+
+        subst "$TEMPLATES_DIR/compile.common.rsp" "env/compile.common.rsp"
+        subst "$TEMPLATES_DIR/link.common.rsp" "env/link.common.rsp"
+        subst "$TEMPLATES_DIR/application-bin.rsp" "env/application-bin.rsp"
+
+        if [[ "$BASE" == *fs-* ]]; then
+            subst "$TEMPLATES_DIR/compile.fs.rsp" "env/compile.rsp"
+            subst "$TEMPLATES_DIR/link.fs.rsp" "env/link.rsp"
+        elif [[ "$BASE" == *sl-* ]]; then
+            subst "$TEMPLATES_DIR/compile.sl.rsp" "env/compile.rsp"
+            subst "$TEMPLATES_DIR/link.sl.rsp" "env/link.rsp"
+        else
+            echo "Warning: Defaulting to fs configuration."
+            subst "$TEMPLATES_DIR/compile.fs.rsp" "env/compile.rsp"
+            subst "$TEMPLATES_DIR/link.fs.rsp" "env/link.rsp"
+        fi
+
+        echo "$BASE" > env/base_name
+
+#         # Create llpreprocessor_shim.h in env
+#         cat <<EOF > env/llpreprocessor_shim.h
+# #ifdef __clang__
+# #undef __clang__
+# #define __RESTORE_CLANG__
+# #endif
+
+# // Prevent Boost from specializing for wchar_t since it's now unsigned short
+# #define BOOST_NO_INTRINSIC_WCHAR_T 1
+
+# #include <llpreprocessor.h>
+
+# #ifdef __RESTORE_CLANG__
+# #define __clang__ 1
+# #undef __RESTORE_CLANG__
+# #endif
+# EOF
+#         # Generate wchar.rsp
+#         # -Xclang -fno-wchar: Treat wchar_t as unsigned short (MSVC compat)
+#         # -fms-extensions: Enable MS extensions
+#         # -include env/llpreprocessor_shim.h: Sandwich llpreprocessor.h to hide __clang__ during its inclusion
+#         (
+#             echo ""
+#             echo "-Xclang -fno-wchar -fms-extensions -includeenv/llpreprocessor_shim.h"
+#             echo ""
+#             EXTRA_INCS="-I. -isystemsnapshot/source"
+#             echo "$EXTRA_INCS"
+#         ) >> env/compile.rsp
+
+#         echo "Created env/llpreprocessor_shim.h shim and appended env/compile.rsp to utilize."
+
+        echo "Init complete."
+        ;;
+
+    mod)
+        FILE_PART=${1:-}
+        if [ -z "$FILE_PART" ]; then
+            fail "Usage: $0 mod <partial_filename>"
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        # Search in snapshot/source
+        FOUND=$(find snapshot/source -name "$FILE_PART" | head -n 1)
+
+        if [ -z "$FOUND" ]; then
+            fail "File not found in snapshot/source: $FILE_PART"
+        fi
+
+        cp "$FOUND" .
+        echo "Copied $FOUND to $(pwd)/$(basename "$FOUND")"
+        ;;
+
+    diff)
+        FILE_PART=${1:-}
+        if [ -z "$FILE_PART" ]; then
+            fail "Usage: $0 diff <partial_filename>"
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        # Search in snapshot/source
+        FOUND=$(find snapshot/source -name "$FILE_PART" | head -n 1)
+
+        if [ -z "$FOUND" ]; then
+            fail "File not found in snapshot/source: $FILE_PART"
+        fi
+
+        LOCAL_FILE=$(basename "$FOUND")
+        if [ ! -f "$LOCAL_FILE" ]; then
+            fail "Local file not found: $LOCAL_FILE"
+        fi
+
+        diff -u "$FOUND" "$LOCAL_FILE" || true
+        ;;
+
+    status)
+        ARG1=${1:-}
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        check_file_info() {
+            local f=$1
+            local snap_path=$2
+
+            local status_diff="N/A"
+            local status_poly=""
+            local status_obj=""
+            local is_override=0
+
+            if [ -n "$snap_path" ] && [ -f "$snap_path" ]; then
+                is_override=1
+                if cmp -s "$snap_path" "$f"; then
+                    status_diff="Same"
+                else
+                    status_diff="Modified"
+                fi
+            else
+                status_diff="Local Only"
+            fi
+
+            local base=$(basename "$f" .cpp)
+            base=$(basename "$base" .h)
+
+            if [ -f "polyfills/${base}.compile.rsp" ]; then
+                status_poly="${status_poly}C"
+            fi
+            if [ -f "polyfills/${base}.link.rsp" ]; then
+                status_poly="${status_poly}L"
+            fi
+            [ -z "$status_poly" ] && status_poly="-"
+
+            # UPDATED: Check for object file in build/ dir
+            # Preserves hierarchy, e.g., build/vrmod/session.hpp.obj
+            if [ -f "build/${f}.obj" ]; then
+                status_obj="Present"
+            else
+                status_obj="-"
+            fi
+
+            echo "$is_override|$f|$status_diff|$status_poly|$status_obj"
+        }
+
+        # Gather all files
+        # Use find to avoid errors if no files match
+        ALL_FILES=()
+        while IFS= read -r f; do
+             if [ -f "$f" ]; then
+                 ALL_FILES+=("$(basename "$f")")
+             fi
+        done < <(find . -maxdepth 1 \( -name "*.cpp" -o -name "*.h" \) -type f)
+
+        OVERRIDES=()
+        LOCAL_ONLY=()
+
+        for f in "${ALL_FILES[@]}"; do
+             # Find in snapshot
+             FOUND=$(find snapshot/source -name "$f" 2>/dev/null | head -n 1)
+             INFO=$(check_file_info "$f" "$FOUND")
+             IS_OVERRIDE=$(echo "$INFO" | cut -d'|' -f1)
+
+             if [ "$IS_OVERRIDE" -eq 1 ]; then
+                 OVERRIDES+=("$INFO")
+             else
+                 LOCAL_ONLY+=("$INFO")
+             fi
+        done
+
+        # Sort lists (by filename, which is field 2)
+        if [ ${#OVERRIDES[@]} -gt 0 ]; then
+             mapfile -t OVERRIDES < <(printf '%s\n' "${OVERRIDES[@]}" | sort -t'|' -k2)
+        fi
+        if [ ${#LOCAL_ONLY[@]} -gt 0 ]; then
+             mapfile -t LOCAL_ONLY < <(printf '%s\n' "${LOCAL_ONLY[@]}" | sort -t'|' -k2)
+        fi
+
+        if [[ "$ARG1" == "overrides" ]]; then
+            # Output only filenames of overridden files
+            for info in "${OVERRIDES[@]}"; do
+                echo "$info" | cut -d'|' -f2
+            done
+        else
+            # Output full status table
+             printf "%-30s %-15s %-15s %-15s\n" "File" "Snapshot Diff" "Polyfills" "Object"
+             echo "-------------------------------------------------------------------------------"
+
+             for info in "${OVERRIDES[@]}"; do
+                 F_NAME=$(echo "$info" | cut -d'|' -f2)
+                 S_DIFF=$(echo "$info" | cut -d'|' -f3)
+                 S_POLY=$(echo "$info" | cut -d'|' -f4)
+                 S_OBJ=$(echo "$info" | cut -d'|' -f5)
+                 printf "%-30s %-15s %-15s %-15s\n" "$F_NAME" "$S_DIFF" "$S_POLY" "$S_OBJ"
+             done
+
+             for info in "${LOCAL_ONLY[@]}"; do
+                 F_NAME=$(echo "$info" | cut -d'|' -f2)
+                 S_DIFF=$(echo "$info" | cut -d'|' -f3)
+                 S_POLY=$(echo "$info" | cut -d'|' -f4)
+                 S_OBJ=$(echo "$info" | cut -d'|' -f5)
+                 printf "%-30s %-15s %-15s %-15s\n" "$F_NAME" "$S_DIFF" "$S_POLY" "$S_OBJ"
+             done
+        fi
+        ;;
+
+    mergetool)
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 mergetool <basename>"
+        fi
+
+        # Find local file
+        LOCAL_FILE=""
+        if [ -f "$BASENAME" ]; then
+            LOCAL_FILE="$BASENAME"
+        elif [ -f "${BASENAME}.cpp" ]; then
+            LOCAL_FILE="${BASENAME}.cpp"
+        elif [ -f "${BASENAME}.h" ]; then
+            LOCAL_FILE="${BASENAME}.h"
+        else
+             fail "Local file not found for basename: $BASENAME"
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        FOUND=$(find snapshot/source -name "$LOCAL_FILE" | head -n 1)
+        if [ -z "$FOUND" ]; then
+            fail "File not found in snapshot/source: $LOCAL_FILE"
+        fi
+
+        echo "Running meld on $FOUND and $LOCAL_FILE..."
+        meld "$FOUND" "$LOCAL_FILE"
+        ;;
+
+    patch)
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 patch <basename>"
+        fi
+
+        PATCH_FILE="patches/${BASENAME}.patch"
+        if [ ! -f "$PATCH_FILE" ]; then
+             fail "Patch file not found: $PATCH_FILE"
+        fi
+
+        TARGET_FILE="$BASENAME"
+
+        # Check if local file exists
+        CREATED_BY_CMD=0
+        if [ ! -f "$TARGET_FILE" ]; then
+             echo "Local file $TARGET_FILE does not exist. Attempting mod..."
+             # Call mod logic (function or recursive)
+             # Reuse mod logic by calling self
+             "$0" mod "$TARGET_FILE"
+             CREATED_BY_CMD=1
+        fi
+
+        if [ ! -d "snapshot" ]; then
+            fail "Snapshot symlink not found. Run '$0 init' first."
+        fi
+
+        FOUND=$(find snapshot/source -name "$TARGET_FILE" | head -n 1)
+        if [ -z "$FOUND" ]; then
+             fail "File not found in snapshot/source: $TARGET_FILE"
+        fi
+
+        # Verify unmodified from snapshot
+        if ! cmp -s "$FOUND" "$TARGET_FILE"; then
+             fail "Local file $TARGET_FILE is modified compared to snapshot. Aborting patch."
+        fi
+
+        echo "Applying patch $PATCH_FILE to $TARGET_FILE..."
+        # Try applying patch.
+        if patch -i "$PATCH_FILE" "$TARGET_FILE"; then
+             echo "Patch applied successfully."
+        else
+             echo "Patch failed."
+             if [ "$CREATED_BY_CMD" -eq 1 ]; then
+                 echo "Removing created file $TARGET_FILE..."
+                 rm "$TARGET_FILE"
+             else
+                 echo "Restoring $TARGET_FILE from snapshot..."
+                 cp "$FOUND" "$TARGET_FILE"
+             fi
+             exit 1
+        fi
+        ;;
+
+    compile_)
+        # If we have more than 2 args (compile_ + file1 + file2...), recurse
+        if [ "$#" -gt 1 ]; then 
+            for x in "$@"; do
+                 # Call self with the command and the single arg
+                 "$0" compile_ "$x"
+            done
+            exit 0
+        fi
+        BASENAME=${1:-}
+        if [ -z "$BASENAME" ]; then
+            fail "Usage: $0 compile_ <source> [<source>...]"
+        fi
+
+        SRC_FILE=""
+        if [ -f "$BASENAME" ]; then
+            SRC_FILE="$BASENAME"
+        elif [ -f "${BASENAME}.cpp" ]; then
+            SRC_FILE="${BASENAME}.cpp"
+        else
+             fail "Source file not found: $BASENAME"
+        fi
+
+        OBJ_FILE="build/${SRC_FILE}.obj"
+
+        NEEDS_COMPILE=0
+
+        if [ ! -f "$OBJ_FILE" ]; then
+            NEEDS_COMPILE=1
+            REASON="Object file missing"
+        else
+            # Mtime check of source against build/ artifact
+            if [ "$SRC_FILE" -nt "$OBJ_FILE" ]; then
+                NEEDS_COMPILE=1
+                REASON="$SRC_FILE newer than object"
+            fi
+        fi
+
+        DEPS=("$SRC_FILE")
+
+        # Scan immediate headers
+        # Get list of included files (naive regex)
+        INCLUDES=$(grep -E '^\s*#\s*include\s*"' "$SRC_FILE" | cut -d'"' -f2) || { echo "no (non-system) includes $SRC_FILE?" >&2 ; true; }
+
+        # 0. grab additional CXXFLAGS from polyfills 
+        POLYFILL=
+        if [ -s "polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp" ] ; then
+            INCLUDES="$INCLUDES polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp"
+            POLYFILL="$(cat polyfills/$(basename -s .cpp $SRC_FILE).compile.rsp)"
+        fi
+        if [ -s "polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp" ] ; then
+            POLYFILL="$(cat polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp)"
+            INCLUDES="$INCLUDES polyfills/$(echo $SRC_FILE | sed -e 's@/@.@g').compile.rsp"
+        fi
+
+        # 1. Parse -I paths from CXXFLAGS into an array (splits by space, strips -I prefix)
+        SEARCH_DIRS=()
+        for flag in ${CXXFLAGS:-} ${POLYFILL}; do
+            if [[ "$flag" == -I* ]]; then
+                SEARCH_DIRS+=("${flag#-I}")
+            fi
+            if [[ "$flag" == -include* ]]; then
+                INCLUDES="$INCLUDES ${flag#-include}"
+            fi
+        done
+
+        for inc in $INCLUDES; do
+            RESOLVED=""
+            inc_base=$(basename "$inc")
+
+            # A. Check local file (Standard "" behavior)
+            if [ -f "$inc" ]; then
+                RESOLVED="$inc"
+            
+            # B. Check CXXFLAGS search paths
+            else
+                for dir in "${SEARCH_DIRS[@]}"; do
+                    # Check 1: Standard path composition (dir + relative path)
+                    if [ -f "${dir}/${inc}" ]; then
+                        RESOLVED="${dir}/${inc}"
+                        break
+                    # Check 2: Flattened basename match
+                    elif [ -f "${dir}/${inc_base}" ]; then
+                        RESOLVED="${dir}/${inc_base}"
+                        break
+                    fi
+                done
+            fi
+
+            # C. Fallback to snapshot/source recursive find
+            if [ -z "$RESOLVED" ] && [ -d "snapshot" ]; then
+                 FOUND=$(find snapshot/source -name "$inc_base" -print -quit)
+                 if [ -n "$FOUND" ]; then
+                     RESOLVED="$FOUND"
+                 fi
+            fi
+
+            # D. Check resolved include against the build/ object
+            if [ -n "$RESOLVED" ]; then
+                DEPS+=("$inc_base")
+                if [ "$NEEDS_COMPILE" -eq 0 ] && [ "$RESOLVED" -nt "$OBJ_FILE" ]; then
+                    NEEDS_COMPILE=1
+                    REASON="$RESOLVED newer than object"
+                fi
+            fi
+        done
+
+
+        if [ "$NEEDS_COMPILE" -eq 1 ]; then
+             echo "Compiling due to: $REASON"
+            "$0" compile "$SRC_FILE"
+        else
+             echo "No modifications detected ($SRC_FILE ; scanned dependencies: ${#DEPS[*]})"
+        fi
+        ;;
+
+    compile)
+        FILES=("$@")
+
+        # Check if any files exist
+        if [ ! -e "${FILES[0]}" ]; then
+             echo "No files to compile. ${FILES[@]}"
+             exit 0
+        fi
+
+        if [ ! -d "env" ] || [ ! -f "env/compile.rsp" ]; then
+             fail "Environment not initialized. Run '$0 init' first."
+        fi
+
+        echo "Compiling ${FILES[@]}" >&2
+        for FILE in "${FILES[@]}"; do
+            if [ -f "$FILE" ]; then
+                # 1. Target build/ and ensure directory exists
+                OBJ="build/${FILE}.obj"
+                mkdir -p "$(dirname "$OBJ")"
+
+                # 2. Existing Polyfill Logic (Legacy/Sidecar)
+                POLYFILL=
+                if [ -s "polyfills/$(basename -s .cpp $FILE).compile.rsp" ] ; then
+                    POLYFILL="@polyfills/$(basename -s .cpp $FILE).compile.rsp"
+                fi
+                if [ -s "polyfills/$(echo $FILE | sed -e 's@/@.@g').compile.rsp" ] ; then
+                    POLYFILL="$(cat polyfills/$(echo $FILE | sed -e 's@/@.@g').compile.rsp)"
+                fi
+
+                # 3. NEW: In-File "Toolchain Confession"
+                # Extract string between "TPVM_RECIPE: " and the closing quote "
+                HEADER_OPTS=$(grep -m 1 "TPVM_RECIPE:" "$FILE" | sed -n 's/.*TPVM_RECIPE: \([^"]*\)".*/\1/p') || true
+
+                # echo "Compiling $FILE... $POLYFILL $HEADER_OPTS" >&2
+                
+                echo LIB= ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ" >&2
+                LIB= ./llvm/bin/clang++ @"env/compile.rsp" $POLYFILL $HEADER_OPTS ${CXXFLAGS:-} -c "$FILE" -o "$OBJ"
+            fi
+        done
+        ;;
+
+    link)
+        if [ ! -d "env" ] || [ ! -f "env/link.rsp" ]; then
+             fail "Environment not initialized. Run '$0 init' first."
+        fi
+
+        LOCAL_OBJS=()
+        
+        # This catches build/foo.obj AND build/vrmod/bar.obj
+        mapfile -t LOCAL_OBJS < <(find build -type f -name "*.obj")
+
+        if [ ! -e "${LOCAL_OBJS[0]:-}" ]; then
+            echo "No local objects found in build/." >&2
+            LOCAL_OBJS=()
+        fi
+
+        echo "Filtering object files... ${LOCAL_OBJS[@]}" >&2
+
+        # Python script to filter llobjs.rsp
+        cat <<EOF > env/filter_llobjs.py
+import sys
+import os
+
+local_objs = sys.argv[1:]
+local_obj_names = {os.path.basename(f) for f in local_objs}
+
+try:
+    with open('env/llobjs.rsp', 'r') as f:
+        lines = f.readlines()
+
+    filtered_lines = []
+    removed_count = 0
+    for line in lines:
+        line = line.strip()
+        if not line: continue
+        fname = os.path.basename(line)
+        if fname in local_obj_names:
+            removed_count += 1
+            continue
+        filtered_lines.append(line)
+
+    with open('env/llobjs_filtered.rsp', 'w') as f:
+        f.write('\n'.join(filtered_lines))
+
+    print(f"Filtered {removed_count} overridden objects.")
+
+except Exception as e:
+    print(f"Error filtering objects: {e}")
+    sys.exit(1)
+EOF
+
+        python3 env/filter_llobjs.py "${LOCAL_OBJS[@]}"
+
+        if [ -f "env/base_name" ]; then
+            BASE_NAME=$(cat env/base_name)
+        else
+            BASE_NAME="tpvm"
+        fi
+        OUTPUT_EXE="${BASE_NAME}.exe"
+
+        # Auto-detect polyfills for local objects
+        POLYFILL_ARGS=()
+        if [ ${#LOCAL_OBJS[@]} -gt 0 ]; then
+            for OBJ in "${LOCAL_OBJS[@]}"; do
+                # OBJ is now like build/vrmod/llviewercamera.cpp.obj
+                BASE=$(basename "$OBJ" .obj)  # -> llviewercamera.cpp
+                BASE=$(basename "$BASE" .cpp) # -> llviewercamera
+
+                LINK_RSP="polyfills/${BASE}.link.rsp"
+                if [ -f "$LINK_RSP" ]; then
+                    echo "Injecting linker polyfill: $LINK_RSP" >&2
+                    POLYFILL_ARGS+=("@$LINK_RSP")
+                fi
+            done
+        fi
+
+        echo "Linking $OUTPUT_EXE..." >&2
+
+        echo "LIB= ./llvm/bin/clang++ @env/link.rsp @env/llobjs_filtered.rsp ${LOCAL_OBJS[@]} ${POLYFILL_ARGS[@]} ${LDFLAGS:-} -o $OUTPUT_EXE"
+        LIB= ./llvm/bin/clang++ @"env/link.rsp" @"env/llobjs_filtered.rsp" "${LOCAL_OBJS[@]}" "${POLYFILL_ARGS[@]}" ${LDFLAGS:-} -o "$OUTPUT_EXE"
+
+        echo "Link complete: $OUTPUT_EXE" >&2
+        ;;
+
+    *)
+        usage
+        ;;
+esac

@@ -32,6 +32,26 @@
         "type": "file",
         "name": "sdk/include/um/GL/glu.h",
         "external-contents": "sdk/include/um/gl/GLU.h"
+      },
+      {
+        "type": "file",
+        "name": "Dbt.h.",
+        "external-contents": "sdk/include/um/Dbt.h"
+      },
+      {
+        "type": "file",
+        "name": "sdk/include/um/WERAPI.H",
+        "external-contents": "sdk/include/um/WerApi.h"
+      },
+      {
+        "type": "file",
+        "name": "sdk/include/um/InitGuid.h",
+        "external-contents": "sdk/include/shared/initguid.h"
+      },
+      {
+        "type": "file",
+        "name": "sdk/include/um/Imm.h",
+        "external-contents": "sdk/include/um/imm.h"
       }
     ]
   }

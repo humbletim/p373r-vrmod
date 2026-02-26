@@ -4,7 +4,7 @@ improvise.bash emerges an LL autobuild compatible openvr-vX.Y.Z.sha.tar.bz2 cont
   - autobuild-package.xml
   - LICENSES/openvr.txt
   - include/openvr.h
-  - lib/release/openvr_api.{dll,lib}
+  - lib/release/openvr_api.{dll,lib,viewer_manifest.patch}
 
 NOTE: this 3p stuff is only needed if wanting to integrate as part of autobuild.xml configuration
 
