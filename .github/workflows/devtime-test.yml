@@ -194,13 +194,13 @@ jobs:
           bash -c '. 3p-community-vrmod/improvise.bash ; provision_community_vrmod $PWD'          
 
       - name: '/UPLOAD'
-      - uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
             name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
             path: p373r-vrmod/community/community-vrmod-*.tar.*
 
       - name: '/UPLOAD 3p'
-      - uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
             name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
             path: p373r-vrmod/community/fs-open.exe
