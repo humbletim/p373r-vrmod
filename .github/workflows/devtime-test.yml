@@ -83,6 +83,10 @@ jobs:
             sudo eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 2>&1 > /dev/null
           }
 
+          mkdir -pv bin
+          wget https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
+          git clone https://github.com/humbletim/firestorm-gha tpv-gha-nunja --single-branch
+
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
         id: xwin-ubuntu
@@ -175,7 +179,15 @@ jobs:
       - name: '  edge-compile new viewer exe'
         shell: bash
         run: |
+          sudo mkdir /d
+          ln -vsTf ~/work /d/a
+          sudo mkdir -p '/c/Program Files/nodejs'
+          ln -vsTf /usr/local/bin/node '/c/Program Files/nodejs/node'
+          ln -vsTf /usr/lib/llvm-19 p373r-vrmod/llvm
+          ln -vsTf $PWD/winsdk p373r-vrmod/winsdk
+          touch winsdk/vfsoverlay.json 
           cd ./p373r-vrmod/community
+          ../experiments/tpvm.sh init ../../fs-open
           ../experiments/tpvm.sh patch llviewerdisplay.cpp
           ../experiments/tpvm.sh mod lldir_win32.cpp
           ../experiments/tpvm.sh compile_ llviewerdisplay.cpp
