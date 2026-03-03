@@ -50,7 +50,7 @@ jobs:
       - name: Checkout p373r-vrmod workspace
         shell: bash
         run: |
-          git clone --quiet --filter=tree:0 --single-branch \
+          git clone --no-progress --quiet --filter=tree:0 --single-branch \
             https://github.com/humbletim/p373r-vrmod \
             --branch ${GITHUB_REF_NAME} p373r-vrmod \
           2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
@@ -84,8 +84,8 @@ jobs:
           }
 
           mkdir -pv bin
-          wget https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
-          git clone https://github.com/humbletim/firestorm-gha tpv-gha-nunja --single-branch
+          wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
+          git clone https://github.com/humbletim/firestorm-gha tpv-gha-nunja --single-branch --no-progress
 
       - name: 'xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-')
@@ -102,7 +102,7 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
+          wget -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
           mkdir -pv bin
           tar -C bin --wildcards --strip-components=1 -xvf xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \*/xwin
           # gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
@@ -165,7 +165,7 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          wget https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip
+          wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip
           unzip -q fs-open-80036-afc53db-afc53db-devtime.zip
           #gh --repo humbletim/firestorm-gha run download --name ${{inputs.artifact}} --dir _snapshot
 
@@ -189,7 +189,7 @@ jobs:
       - name: '  edge-compile new viewer exe'
         shell: bash
         run: |
-          ln -vsTf llvm p373r-vrmod/llvm
+          ln -vsTf $PWD/llvm p373r-vrmod/llvm
           ln -vsTf $PWD/winsdk p373r-vrmod/winsdk
           touch winsdk/vfsoverlay.json 
           cd ./p373r-vrmod/community
