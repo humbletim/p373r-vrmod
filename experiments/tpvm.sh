@@ -258,8 +258,9 @@ case "$CMD" in
             [ -z "$status_poly" ] && status_poly="-"
 
             # UPDATED: Check for object file in build/ dir
-            # Preserves hierarchy, e.g., build/vrmod/session.hpp.obj
-            if [ -f "build/${f}.obj" ]; then
+            # Preserves hierarchy and sanitizes out-of-tree paths
+            local safe_f="${f//..\//__\/}"
+            if [ -f "build/${safe_f}.obj" ]; then
                 status_obj="Present"
             else
                 status_obj="-"
@@ -437,7 +438,8 @@ case "$CMD" in
              fail "Source file not found: $BASENAME"
         fi
 
-        OBJ_FILE="build/${SRC_FILE}.obj"
+        SAFE_SRC="${SRC_FILE//..\//__\/}"
+        OBJ_FILE="build/${SAFE_SRC}.obj"
 
         NEEDS_COMPILE=0
 
@@ -547,7 +549,10 @@ case "$CMD" in
         for FILE in "${FILES[@]}"; do
             if [ -f "$FILE" ]; then
                 # 1. Target build/ and ensure directory exists
-                OBJ="build/${FILE}.obj"
+                # Sanitize ../ to __/ to prevent escaping build directory
+                SAFE_FILE="${FILE//..\//__\/}"
+                OBJ="build/${SAFE_FILE}.obj"
+
                 mkdir -p "$(dirname "$OBJ")"
 
                 # 2. Existing Polyfill Logic (Legacy/Sidecar)
