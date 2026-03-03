@@ -3,9 +3,10 @@
 
 #include <glm/glm.hpp>
 #include <functional>
+#include <memory>
 #include <string>
 
-#include <humbletim/opengl.hpp>
+#include "./opengl.hpp"
 
 class LLRenderTarget;
 
@@ -78,13 +79,22 @@ namespace slos {
 
 #ifdef SLOS_UIRT_IMPLEMENTATION
 
+#include "./foaf.hpp"
+#include <glm/gtx/string_cast.hpp> // glm::to_string
+
 #include "llrendertarget.h"
+#include "llframetimer.h"
+#include "llwindow.h"
 #include "llviewerwindow.h"
 #include "pipeline.h"
 #include "llviewercontrol.h"
 #include "llimagepng.h"
 #include "llimagejpeg.h"
 #include "lltextbase.h"
+
+#include "llhudtext.h"
+#include "llagent.h" // gAgent
+
 namespace asdf {
     extern glm::ivec4 SWIZZLE();
     extern glm::vec3 V3();
@@ -130,7 +140,7 @@ namespace slos {
     }
 
     bool EyeRenderTarget::capture() {
-        GLuint srcFBO = slos::get_pipeline_fbo_name();
+        GLuint srcFBO = via_foaf(&gPipeline.mRT->screen, { return mFBO;});//slos::get_pipeline_fbo_name();
         // capture current pipeline buffer to local per-eye fbo 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFBO);
         if (srcFBO == 0) glReadBuffer(GL_BACK); // Only needed for window/backbuffer
@@ -140,7 +150,7 @@ namespace slos {
         // glColor4f(1,1,1,1);//if (_eye == -1) glClearColor(1,0,0,1); else glClearColor(0,0,1,1);
         glClear(GL_COLOR_BUFFER_BIT | (depthID() ? GL_DEPTH_BUFFER_BIT : 0));
 
-        auto t = slos::get_pipeline_size();
+        glm::ivec2 t = { gPipeline.mRT->screen.getWidth(), gPipeline.mRT->screen.getHeight() };//slos::get_pipeline_size();
         auto self = rtsize();
         glBlitFramebuffer(0, 0, t.x, t.y, // src
                           0, 0, self.x, self.y, // dst
@@ -943,7 +953,7 @@ namespace slos {
             gGL.color4f(1.f, 1.f, 1.f, 1.f);
             // auto& view = LLViewerCamera::instance();
             // F32 ground_height_at_camera = land.resolveHeightGlobal( gAgentCamera.getCameraPositionGlobal() )
-            static auto world_position = slos::get_agent_world_position();
+            static auto world_position = glm::vec3(gAgent.getPositionAgent());
             // auto world_position = gAgentview.getOrigin() + view.getAtAxis();
             {
                 gGL.pushMatrix();
@@ -1033,51 +1043,7 @@ namespace slos {
     void gl_blit_side_by_side(glm::ivec2 viewport, glm::ivec2 wh, uint32_t leftFBO, uint32_t rightFBO) {
         gUIProgram.bind();
         LLGLSUIDefault gls_ui;
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        glDisable(GL_DEPTH_TEST);
-        glDisable(GL_BLEND);
-        S32 w = wh.x;
-        S32 h = wh.y;
-        
-        S32 y_bottom = h / 4;
-        S32 y_top = h * 3 / 4;
-        S32 b = 4; // Border thickness in pixels
-
-        #if 1
-            // --- Draw Borders (Backgrounds) ---
-            // We use Scissor+Clear because it is robust and ignores matrix states
-            glEnable(GL_SCISSOR_TEST);
-
-            // Left Eye: Red
-            glScissor(0, y_bottom, w/2, h/2); 
-            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            // Right Eye: Blue
-            glScissor(w/2, y_bottom, w/2, h/2); 
-            glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
-
-            glScissor(0, 0, w, h); 
-            glDisable(GL_SCISSOR_TEST);
-        #endif
-        glClearColor(0.5f, .5f, .5f, .5f);
-        // glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-        // --- Blit Images (Inset by b) ---
-
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, leftFBO);
-        // Destination: 0 to w/2, inset by b
-        glBlitFramebuffer(0, 0, viewport.x, viewport.y, 
-                            0 + b, y_bottom + b, (w/2) - b, y_top - b, 
-                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
-        
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, rightFBO);
-        // Destination: w/2 to w, inset by b
-        glBlitFramebuffer(0, 0, viewport.x, viewport.y, 
-                            (w/2) + b, y_bottom + b, w - b, y_top - b, 
-                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        
+        opengl::blit_side_by_side(viewport, wh, leftFBO, rightFBO);
         gUIProgram.unbind();
     }
 
@@ -1150,5 +1116,5 @@ namespace slos {
 } //ns
 
 #elif __INCLUDE_LEVEL__ == 0
-    #error "TPVM_RECIPE: -xc++ -DSLOS_IMPLEMENTATION"
+    #error "TPVM_RECIPE: -xc++ -UUNICODE -DSLOS_UIRT_IMPLEMENTATION"
 #endif

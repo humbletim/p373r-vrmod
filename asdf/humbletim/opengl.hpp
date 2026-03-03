@@ -14,8 +14,12 @@ typedef struct __GLsync *GLsync;
 #include <glm/gtc/type_ptr.hpp>
 
 // TODO: depends on opengl system headers being provided from the outside...
-namespace opengl { 
+namespace opengl {
     using GLint = int32_t;
+
+    void blit_side_by_side(glm::ivec2 viewport, glm::ivec2 wh, uint32_t leftFBO, uint32_t rightFBO);
+    void blit_bordered(glm::ivec2 viewport, glm::ivec2 wh, uint32_t fboID, glm::vec4 borderColor);
+
     struct RGBAData {
         GLint id, width, height;
         std::vector<uint8_t> bytes;
@@ -44,15 +48,15 @@ namespace opengl {
             GLuint pbo = 0;
             GLsync fence = 0;
             bool busy = false;
-            glm::ivec2 coord_processing = {-1, -1}; 
+            glm::ivec2 coord_processing = {-1, -1};
             
             // Data storage
-            glm::vec4 val_color; 
+            glm::vec4 val_color;
             float val_depth;
         } col, dep;
 
-        glm::ivec2 target_coord = {-1, -1}; 
-        GLbitfield ready_flags = 0; 
+        glm::ivec2 target_coord = {-1, -1};
+        GLbitfield ready_flags = 0;
 
         // --- API ---
         PBOCursor(GLuint fbo_id = 0, GLbitfield initial_mask = GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -103,7 +107,7 @@ namespace opengl {
         result.bytes.resize(result.width * result.height * 4);
         // glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
         // glFinish();
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, result.bytes.data());  
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, result.bytes.data());
         glBindTexture(GL_TEXTURE_2D, 0);
         return result;
     }
@@ -161,7 +165,7 @@ namespace opengl {
             result.bytes.resize(result.width * result.height * 4);
             // glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
             // glFinish();
-            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, result.bytes.data());  
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, result.bytes.data());
             glBindTexture(GL_TEXTURE_2D, 0);
         } else if (type == GL_RENDERBUFFER) {
             glBindRenderbuffer(GL_RENDERBUFFER, result.id);
@@ -215,7 +219,7 @@ namespace opengl {
             result.floats.resize(result.width * result.height * 1);
             // glMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
             // glFinish();
-            glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, result.floats.data());  
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, result.floats.data());
             glBindTexture(GL_TEXTURE_2D, 0);
         } else if (type == GL_RENDERBUFFER) {
             glBindRenderbuffer(GL_RENDERBUFFER, result.id);
@@ -266,18 +270,18 @@ namespace opengl {
         if (dep.fence) glDeleteSync(dep.fence);
     }
 
-    void PBOCursor::setMask(GLbitfield m) { 
-        mask = m; 
+    void PBOCursor::setMask(GLbitfield m) {
+        mask = m;
         // If we turned off a bit that was currently ready, clear it so we don't return stale data if turned back on
-        ready_flags &= mask; 
+        ready_flags &= mask;
     }
 
     void PBOCursor::invalidate() {
         // 1. Mark current data as invalid
         ready_flags = 0;
 
-        // 2. Orphan any in-flight requests. 
-        // By setting processing coord to -1, when the async read finishes, 
+        // 2. Orphan any in-flight requests.
+        // By setting processing coord to -1, when the async read finishes,
         // _check_channel will see the mismatch and discard the result (refusing to update serial/ready_flags).
         col.coord_processing = {-1, -1};
         dep.coord_processing = {-1, -1};
@@ -290,7 +294,7 @@ namespace opengl {
         if (gl_coord == target_coord) return;
         // fprintf(stdout, "setCursorGL(<%d,%d>)\n", gl_coord.x, gl_coord.y);
         target_coord = gl_coord;
-        ready_flags = 0; 
+        ready_flags = 0;
         
         // Try to launch immediately
         _process_channel(col, GL_COLOR_BUFFER_BIT, GL_RGBA, GL_FLOAT);
@@ -382,6 +386,83 @@ namespace opengl {
         }
     }
 
+    void blit_bordered(glm::ivec2 viewport, glm::ivec2 wh, uint32_t fboID, glm::vec4 borderColor) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        
+        S32 w = wh.x;
+        S32 h = wh.y;
+        S32 b = 4; // Border thickness in pixels
+
+        // --- Draw Border (Background) ---
+        // Scissor and clear covers the entire target area to form the border color
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(0, 0, w, h);
+        glClearColor(borderColor.r, borderColor.g, borderColor.b, borderColor.a);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glDisable(GL_SCISSOR_TEST);
+
+        // Reset clear color if your pipeline expects a default gray state afterward
+        // glClearColor(0.5f, 0.5f, 0.5f, 0.5f);
+
+        // --- Blit Image (Inset by b) ---
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, fboID);
+        
+        // Destination is the full w/h, inset by the border thickness on all 4 sides
+        glBlitFramebuffer(0, 0, viewport.x, viewport.y,
+                        b, b, w - b, h - b,
+                        GL_COLOR_BUFFER_BIT, GL_LINEAR);
+                        
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+
+    void blit_side_by_side(glm::ivec2 viewport, glm::ivec2 wh, uint32_t leftFBO, uint32_t rightFBO) {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        S32 w = wh.x;
+        S32 h = wh.y;
+        
+        S32 y_bottom = h / 4;
+        S32 y_top = h * 3 / 4;
+        S32 b = 4; // Border thickness in pixels
+
+        #if 1
+            // --- Draw Borders (Backgrounds) ---
+            // We use Scissor+Clear because it is robust and ignores matrix states
+            glEnable(GL_SCISSOR_TEST);
+
+            // Left Eye: Red
+            glScissor(0, y_bottom, w/2, h/2);
+            glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            // Right Eye: Blue
+            glScissor(w/2, y_bottom, w/2, h/2);
+            glClearColor(0.0f, 0.0f, 1.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            glScissor(0, 0, w, h);
+            glDisable(GL_SCISSOR_TEST);
+        #endif
+        glClearColor(0.5f, .5f, .5f, .5f);
+        // glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        // --- Blit Images (Inset by b) ---
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, leftFBO);
+        // Destination: 0 to w/2, inset by b
+        glBlitFramebuffer(0, 0, viewport.x, viewport.y,
+                            0 + b, y_bottom + b, (w/2) - b, y_top - b,
+                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, rightFBO);
+        // Destination: w/2 to w, inset by b
+        glBlitFramebuffer(0, 0, viewport.x, viewport.y,
+                            (w/2) + b, y_bottom + b, w - b, y_top - b,
+                            GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
 
 } //ns
 

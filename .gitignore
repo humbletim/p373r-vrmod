@@ -1,5 +1,6 @@
 # devtime stuffs
 /*
+*.orig
 !/*.md
 !/experiments
 !/asdf*

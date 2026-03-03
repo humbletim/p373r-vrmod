@@ -23,6 +23,7 @@
 #include "vrmod/cr-types.hpp"
 
 #include "humbletim/slos.hpp"
+#include "humbletim/slos.pose.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

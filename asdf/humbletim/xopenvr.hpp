@@ -62,9 +62,10 @@ struct XVRWrapper;
 static const char * const XVRWrapper_Version = "XVRWrapper_001";
 
 namespace xvr {  
+  static constexpr const auto& XVRWrapper_Version = ::XVRWrapper_Version;
   using Session = std::shared_ptr<XVRWrapper>;
 
-  XVR_INTERFACE const uint32_t MAXDEVICECOUNT;
+  static const constexpr uint32_t MAXDEVICECOUNT{ 64 };
 
   struct Device {
     enum _Device : uint32_t { Invalid=0xffffffff } value;
@@ -298,7 +299,7 @@ struct XVRWrapper {
 #undef interface 
 #endif
 
-XVR_INTERFACE const uint32_t xvr::MAXDEVICECOUNT { 64 };
+// XVR_INTERFACE const uint32_t xvr::MAXDEVICECOUNT { 64 };
 XVR_INTERFACE const xvr::Device xvr::INVALID { xvr::Device::Invalid };
 XVR_INTERFACE const xvr::Device xvr::HMD { 0 };
 

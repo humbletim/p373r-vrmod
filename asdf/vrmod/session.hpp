@@ -66,6 +66,8 @@ namespace nunja {
 // EMBEDDED (implementation details here, not as separate .hpp.obj's))
 #define SLOS_IMPLEMENTATION
 #include <humbletim/slos.hpp> // slos::on_app_quitting
+#define SLOS_POSE_IMPLEMENTATION
+#include <humbletim/slos.pose.hpp> // slos::ht::PlayerTelemetry
 #define VRMOD_SETTINGS_IMPLEMENTATION
 #include <humbletim/slos.settings.hpp>
 #define SLOS_UIRT_IMPLEMENTATION
