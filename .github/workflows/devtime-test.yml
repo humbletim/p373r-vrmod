@@ -176,14 +176,20 @@ jobs:
             path: fs-open
             key: ${{ steps.artifact.outputs.cache-primary-key }}
 
-      - name: '  edge-compile new viewer exe'
+      - name: '  system symlinks'
+        if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
         run: |
           sudo mkdir /d
-          ln -vsTf ~/work /d/a
+          sudo ln -vsTf ~/work /d/a
           sudo mkdir -p '/c/Program Files/nodejs'
-          ln -vsTf /usr/local/bin/node '/c/Program Files/nodejs/node'
-          ln -vsTf /usr/lib/llvm-19 p373r-vrmod/llvm
+          sudo ln -vsTf /usr/local/bin/node '/c/Program Files/nodejs/node'
+          sudo ln -vsTf /usr/lib/llvm-19 llvm
+
+      - name: '  edge-compile new viewer exe'
+        shell: bash
+        run: |
+          ln -vsTf llvm p373r-vrmod/llvm
           ln -vsTf $PWD/winsdk p373r-vrmod/winsdk
           touch winsdk/vfsoverlay.json 
           cd ./p373r-vrmod/community
@@ -213,7 +219,7 @@ jobs:
       - name: '/UPLOAD 3p'
         uses: actions/upload-artifact@v4
         with:
-            name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
+            name: ${{ inputs.runner }}-${{ inputs.key }}-community-vrmod
             path: p373r-vrmod/community/fs-open.exe
 
       - name: Setup no-frills tmate session
