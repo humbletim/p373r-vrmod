@@ -1,5 +1,4 @@
-# .github/workflows/manual-debug.yml
-name: 'devtime-test'
+name: 'ReleaseFS_Open Edge'
 on:
   workflow_dispatch:
     inputs:
@@ -14,22 +13,14 @@ on:
             - ubuntu-latest
             - ubuntu-slim
             - macos-latest
-          default: windows-latest
+          default: ubuntu-latest
         key:
             type: string
-        command:
-            type: string
-        buildcapture:
-            type: boolean
-            default: true
-        screencapture:
-            type: boolean
-            default: true
         tmate-followup:
             type: boolean
             default: false
 
-run-name: devtime-test ${{ inputs.runner }} ${{ inputs.artifact }}
+run-name: ReleaseFS_Open Edge ${{ inputs.runner }} ${{ inputs.artifact }}
 
 defaults:
   run:
@@ -57,12 +48,12 @@ jobs:
           ${{ toJSON(github.event.inputs) }}
           EOF
 
-      - name: Checkout p373r-vrmod-devtime workspace
+      - name: Checkout p373r-vrmod workspace
         shell: bash
         run: |
           git clone --quiet --filter=tree:0 --single-branch \
             https://github.com/humbletim/p373r-vrmod \
-            --branch devtime p373r-vrmod-devtime \
+            --branch ${GITHUB_REF_NAME} p373r-vrmod \
           2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
@@ -70,7 +61,7 @@ jobs:
         shell: bash
         run: |
           echo "::notice title=inputs::$(jq -c . inputs.json)"
-          echo "::notice title=mini-report::$(for id in `ls -1d p373r-vrmod-devtime 2>/dev/null` ; do
+          echo "::notice title=mini-report::$(for id in `ls -1d p373r-vrmod 2>/dev/null` ; do
             echo -n "$(basename $id)=$(git -C $id rev-parse --short HEAD),$(git -C $id rev-list --count HEAD),$(git -C $id describe --all --always | sed 's@heads/@@'); "
           done)"
 
@@ -108,8 +99,11 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
-          chmod a+x bin/xwin
+          wget https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
+          mkdir -pv bin
+          tar -C bin --wildcards --strip-components=1 -xvf xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \*/xwin
+          # gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
+          # chmod a+x bin/xwin
 
       - name: '/xwin-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
@@ -123,11 +117,7 @@ jobs:
         id: winsdk-ubuntu
         uses: actions/cache/restore@v4
         with:
-            path: |
-              winsdk/readme.env
-              winsdk/crt
-              winsdk/sdk
-              winsdk/vfsoverlay.json
+            path: winsdk
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
 
       - name: ' ... winsdk-ubuntu'
@@ -137,17 +127,18 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          skipxwincheck=1 bash ./p373r-vrmod-devtime/experiments/portables/portable-winsdk.bash
+          mkdir -pv tmp
+          SDKVER=10.0.26100
+          CRTVER=14.44.17.14
+          VARIANTS=desktop
+          SDKROOT=winsdk
+          bin/xwin --accept-license -Loff --cache-dir=tmp --variant $VARIANTS --crt-version $CRTVER --sdk-version $SDKVER splat --output $SDKROOT
 
       - name: '/winsdk-ubuntu'
         if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
         uses: actions/cache/save@v4
         with:
-            path: |
-              winsdk/readme.env
-              winsdk/crt
-              winsdk/sdk
-              winsdk/vfsoverlay.json
+            path: winsdk
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
 
       - name: ' ... winsdk-windows'
@@ -155,13 +146,13 @@ jobs:
         if: startsWith(inputs.runner, 'windows-')
         shell: bash
         run: |
-          ./p373r-vrmod-devtime/experiments/winsdk.in/other/vs-emulate-xwin.bat
+          ./p373r-vrmod/experiments/winsdk.in/other/vs-emulate-xwin.bat
 
       - name: 'ARTIFACT:'
         id: artifact
         uses: actions/cache/restore@v4
         with:
-            path: _snapshot
+            path: fs-open
             key: ${{ inputs.runner }}-${{ inputs.key }}-${{ inputs.artifact }}-artifact
 
       - name: '  download and unpack artifact'
@@ -171,51 +162,52 @@ jobs:
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh --repo humbletim/firestorm-gha run download --name ${{inputs.artifact}} --dir _snapshot
-          inner_dir=$(dirname _snapshot/*/llobjs.rsp.in)
-          # mv $inner_dir -iv .
-          (
-            echo artifact=${{inputs.artifact}}
-            echo snapshot_dir=${inner_dir}
-            echo base=$(basename ${inner_dir})
-            echo prefix=${base//[^[:alnum:]]/-}
-          ) | tee -a _snapshot/GITHUB_ENV
+          wget https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip
+          unzip -q fs-open-80036-afc53db-afc53db-devtime.zip
+          #gh --repo humbletim/firestorm-gha run download --name ${{inputs.artifact}} --dir _snapshot
 
       - name: '/ARTIFACT'
         if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
         uses: actions/cache/save@v4
         with:
-            path: _snapshot
+            path: fs-open
             key: ${{ steps.artifact.outputs.cache-primary-key }}
 
-      - name: '  postprocess _snapshot'
+      - name: '  edge-compile new viewer exe'
         shell: bash
         run: |
-          . _snapshot/GITHUB_ENV
-          cat _snapshot/GITHUB_ENV | tee -a $GITHUB_ENV
-          set -x
-          cmd //c mklink //d "$base" $(cygpath -w "$snapshot_dir") || ln -s "$snapshot_dir" "$base"
-          cat <<'EOF' | tee command.bash
-          ${{inputs.command}}
-          EOF
-          bash command.bash || echo nope $?
+          cd ./p373r-vrmod/community
+          ../experiments/tpvm.sh patch llviewerdisplay.cpp
+          ../experiments/tpvm.sh mod lldir_win32.cpp
+          ../experiments/tpvm.sh compile_ llviewerdisplay.cpp
+          ../experiments/tpvm.sh compile_ lldir_win32.cpp
+          ../experiments/tpvm.sh compile_ vrmod.llviewerdisplay.hpp 
+          ../experiments/tpvm.sh compile_ llviewerVR.cpp 
+          ../experiments/tpvm.sh compile_ ../asdf/humbletim/xopenvr.hpp
+          ../experiments/tpvm.sh compile_ ../asdf/humbletim/opengl.hpp 
+          ../experiments/tpvm.sh link
 
-      - name: buildcapture
-        if: inputs.buildcapture
+      - name: '  edge-compile new viewer exe'
         shell: bash
         run: |
-          ./p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.build.bash
-          bash build/*.publish.bash
+          cd ./p373r-vrmod/community
+          bash -c '. 3p-community-vrmod/improvise.bash ; provision_community_vrmod $PWD'          
 
-      - name: screencapture
-        if: inputs.screencapture && startsWith(inputs.runner, 'ubuntu-')
-        shell: bash
-        run: |
-          bash fs-devtime/env bash p373r-vrmod-devtime/experiments/fs/winxtropia-custom/ubuntu.test.screencapture.bash
+      - name: '/UPLOAD'
+      - uses: actions/upload-artifact@v4
+        with:
+            name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
+            path: p373r-vrmod/community/community-vrmod-*.tar.*
+
+      - name: '/UPLOAD 3p'
+      - uses: actions/upload-artifact@v4
+        with:
+            name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
+            path: p373r-vrmod/community/fs-open.exe
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup && inputs.runner == 'windows-latest'
-        uses: ./p373r-vrmod-devtime/.github/nofrills-tmate
+        uses: ./p373r-vrmod/.github/nofrills-tmate
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:

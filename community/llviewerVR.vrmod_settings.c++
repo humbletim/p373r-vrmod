@@ -66,6 +66,8 @@ struct VrModSettings {
 
     // "Virtual" settings that appear in the DebugSettings dialog. They are not
     // persisted directly; their state is managed via the mJsonBlob.
+    LLCachedControl<S32>  preview { gSavedSettings, "vrmod.preview", DEFAULTS.at("preview").to_number<int>(), "VR Render Preview:\n"
+        "-1: Left Eye\n0: off\n+1: Right Eye\n2: SideBySide<Left Eye, Right Eye>\n-2: SideBySide<Right Eye, Left Eye>" };
     LLCachedControl<bool> handcontrollers{ gSavedSettings, "vrmod.handcontrollers", DEFAULTS.at("handcontrollers").as_bool(), "Toggle VR hand controller processing." };
     LLCachedControl<bool> handlasers{ gSavedSettings, "vrmod.handlasers", DEFAULTS.at("handlasers").as_bool(), "Toggle VR hand controller laser/cursor rendering." };
     LLCachedControl<bool> mousezoom{ gSavedSettings, "vrmod.mousezoom", DEFAULTS.at("mousezoom").as_bool(), "Toggle the VR mode mouse cursor corner-zooming effect." };
@@ -92,6 +94,7 @@ struct VrModSettings {
 };
 
 /*static*/ const boost::json::object VrModSettings::DEFAULTS{
+    { "preview", -2 },
     { "handcontrollers", true },
     { "handlasers",      true },
     { "mousezoom",       true },
