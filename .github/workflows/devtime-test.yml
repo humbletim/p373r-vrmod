@@ -1,10 +1,9 @@
-name: 'ReleaseFS_Open Edge'
+name: 'ReleaseFS_Open_Edge'
 on:
   workflow_dispatch:
     inputs:
         artifact:
             type: string
-            required: true
         runner:
           required: true
           type: choice
