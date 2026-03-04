@@ -63,19 +63,19 @@ public:
 
 	struct FramebufferDesc
 	{
-		GLuint m_nDepthBufferId;
-		GLuint m_nRenderTextureId;
-		GLuint m_nRenderFramebufferId;
-		GLuint m_nResolveTextureId;
-		GLuint mFBO;
-		GLuint IsReady;
+		// GLuint m_nDepthBufferId;
+		// GLuint m_nRenderTextureId;
+		// GLuint m_nRenderFramebufferId;
+		GLuint m_nResolveTextureId{ 0 };
+		GLuint mFBO{ 0 };
+		GLuint IsReady{ false };
 	};
-	FramebufferDesc leftEyeDesc;
-	FramebufferDesc rightEyeDesc;
+	FramebufferDesc leftEyeDesc{};
+	FramebufferDesc rightEyeDesc{};
 	
 	VocalValue<U32> m_nRenderWidth{"m_nRenderWidth"};
 	VocalValue<U32> m_nRenderHeight{"m_nRenderHeight"};
-	S32 m_iTrackedControllerCount;
+	// S32 m_iTrackedControllerCount;
 	VocalValue<S32> m_iZoomIndex{"m_iZoomIndex",  0 };
 	VocalValue<F32> m_fCamRotOffset{"m_fCamRotOffset", 90.0f};
 	VocalValue<F32> m_fCamPosOffset{"m_fCamPosOffset", 0 };
@@ -102,10 +102,10 @@ public:
 	// S32 m_iThirdWidth;
 	// S32 m_iThirdHeight;
 	
-	F32 m_fFocusDistance;
+	F32 m_fFocusDistance{ 1.0f };
 	// F32 m_fTextureShift;
-	F32 m_fFOV;
-	F32 m_fTextureZoom;
+	F32 m_fFOV{ 100.0f };
+	F32 m_fTextureZoom{ 0 };
 
 	// float m_fNearClip;
 	// float m_fFarClip;
@@ -114,7 +114,7 @@ public:
 	std::string m_strDriver;
 	std::string m_strDisplay;
 
-	glm::mat4 m_mat4HMDPose;
+	glm::mat4 m_mat4HMDPose{ 1.0f };
 	// glm::mat4 m_rmat4DevicePose[xvr::MAXDEVICECOUNT];
 	// glm::mat4 m_mat4eyePosLeft;
 	// glm::mat4 m_mat4eyePosRight;
@@ -123,7 +123,7 @@ public:
 	// glm::mat4 m_mat4ProjectionLeft;
 	// glm::mat4 m_mat4ProjectionRight;
 
-	LLMatrix4 ConvertGLMToLLMatrix4(const glm::mat4& m);
+	// LLMatrix4 ConvertGLMToLLMatrix4(const glm::mat4& m);
 
 	// LLVector3 gHMDAxes;
 	LLVector3 gCurrentCameraPos;
@@ -136,13 +136,13 @@ public:
 	LLVector3 gCtrlOrigin[xvr::MAXDEVICECOUNT];
 	LLCoordGL gCtrlscreen[xvr::MAXDEVICECOUNT];
 
-	LLHUDText *hud_textp;
+	LLHUDText *hud_textp { nullptr };
 	std::string m_strHudText;
 	// bool m_bHudTextUpdated=FALSE;
 
 	// bool gRightClick[xvr::MAXDEVICECOUNT];
 	// bool gLeftClick[xvr::MAXDEVICECOUNT];
-	S32 gCursorDiff;
+	S32 gCursorDiff{ 0 };
 	// uint64_t gPreviousButtonMask;
 	// uint64_t gButton;
 

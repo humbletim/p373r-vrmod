@@ -570,7 +570,7 @@ void ProceduralVRWrapper::updatePoses(float tt) {
                 }
             }
         }
-        return glm::toMat4(qTotal);
+        return glm::translate(glm::mat4(1.0f), glm::vec3(std::sin(time/2.0f) * 2.0f,0,0)) * glm::toMat4(qTotal);
     };
 
     glm::mat4 hmdViewPlayspace = glm::translate(glm::mat4(1.0f), glm::vec3(0,uniform.playerHeight,0)) * generateMockPose(tt, uniform.cycle);

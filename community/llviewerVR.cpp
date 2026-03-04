@@ -26,18 +26,19 @@
 #include "llviewerVR.vrmod_settings.c++" // gVrModSettings
 
 #include "humbletim/opengl.hpp" // opengl::blit_side_by_side
+#include <glm/gtx/string_cast.hpp> // glm::to_string
 
 llviewerVR gVR{}; // global singleton
 
 llviewerVR::llviewerVR()
 {
-	leftEyeDesc.m_nResolveTextureId = 0;
-	rightEyeDesc.m_nResolveTextureId = 0;
-	hud_textp = NULL;
-	m_fFocusDistance = 1;
+	// leftEyeDesc.m_nResolveTextureId = 0;
+	// rightEyeDesc.m_nResolveTextureId = 0;
+	// hud_textp = NULL;
+	// m_fFocusDistance = 1;
 	// m_fTextureShift = 0;
-	m_fTextureZoom = 0;
-	m_fFOV = 100;
+	// m_fTextureZoom = 0;
+	// m_fFOV = 100;
 }
 
 llviewerVR::~llviewerVR() {}
@@ -78,13 +79,13 @@ F32 llviewerVR::eyeDistance() {
 	return 2000.0 * mat[3][0]; // Extract Translation X
 }
 
-LLMatrix4 llviewerVR::ConvertGLMToLLMatrix4(const glm::mat4& m)
-{
-	LLMatrix4 mout;
-	const float* src = glm::value_ptr(glm::transpose(m)); // Transpose to match LLMatrix4 layout
-	memcpy(mout.mMatrix, src, sizeof(float) * 16);
-	return mout;
-}
+// LLMatrix4 llviewerVR::ConvertGLMToLLMatrix4(const glm::mat4& m)
+// {
+// 	LLMatrix4 mout;
+// 	const float* src = glm::value_ptr(glm::transpose(m)); // Transpose to match LLMatrix4 layout
+// 	memcpy(mout.mMatrix, src, sizeof(float) * 16);
+// 	return mout;
+// }
 
 void llviewerVR::UpdateHMDMatrixPose()
 {
@@ -104,6 +105,52 @@ void llviewerVR::UpdateHMDMatrixPose()
 	// }
 
 	gHMD->getValidDevicePose(xvr::HMD, m_mat4HMDPose);
+	m_mat4HMDPose = glm::transpose(m_mat4HMDPose);
+
+	if (gVrModSettings->handcontrollers)
+	for (uint32_t unTrackedDevice = xvr::HMD + 1; unTrackedDevice < xvr::MAXDEVICECOUNT; ++unTrackedDevice)
+	{
+		gCtrlscreen[unTrackedDevice].set(-1, -1);
+		glm::mat4 mat;
+		if (!gHMD->getValidDevicePose((xvr::Device)unTrackedDevice, mat)) continue;
+		mat = glm::inverse(glm::transpose(mat));// * glm::inverse(m_mat4HMDPose);
+		glm::vec4 row2 = glm::row(mat, 2);
+		LLVector3 dir(row2.x, -row2.z, row2.y);
+
+		glm::vec4 row1 = glm::row(mat, 1);
+		LLVector3 up(row1.x, -row1.z, row1.y);
+
+		glm::vec4 row0 = glm::row(mat, 0);
+		LLVector3 left(row0.x, -row0.z, row0.y);
+
+		glm::vec4 row3 = glm::row(mat, 3);
+		// fprintf(stdout, "row3=%s\n", glm::to_string(row3).c_str());
+		// fprintf(stdout, "mat[3]=%s\n", glm::to_string(mat[3]).c_str());
+		gCtrlOrigin[unTrackedDevice].setVec(row3.x, -row3.z, row3.y);
+
+
+		LLQuaternion q1(dir, left, up);
+		LLQuaternion qCameraOrig(m_vdir_orig, m_vleft_orig, m_vup_orig);
+		float r3, p3, y3;
+		qCameraOrig.getEulerAngles(&r3, &p3, &y3);
+
+		LLQuaternion q3;
+		q3.setEulerAngles(0, 0, y3 - (m_fCamRotOffset * DEG_TO_RAD));
+		q1 = (q1)*q3;
+
+		LLMatrix3 m3 = q1.getMatrix3();
+		dir = m3.getFwdRow();
+		dir.normalize();
+
+		// gCtrlOrigin[unTrackedDevice] -= gHmdPos;
+		// gCtrlOrigin[unTrackedDevice] = {};//gCurrentCameraPos;
+		gCtrlOrigin[unTrackedDevice] = gCurrentCameraPos + gCtrlOrigin[unTrackedDevice];
+		gCtrlPos[unTrackedDevice] = gCtrlOrigin[unTrackedDevice] - (dir * 1.0f);
+
+		posToScreen(gCtrlPos[unTrackedDevice], gCtrlscreen[unTrackedDevice], FALSE);
+		
+		gCtrlscreen[unTrackedDevice].mY -= gCursorDiff;
+	}
 }
 
 void llviewerVR::SetupCameras()
@@ -285,7 +332,7 @@ bool llviewerVR::ProcessVRCamera()
 			m_vup_orig = LLViewerCamera::getInstance()->getUpAxis();
 			m_vleft_orig = LLViewerCamera::getInstance()->getLeftAxis();
 			m_vpos_orig = LLViewerCamera::getInstance()->getOrigin();
-			
+			gCurrentCameraPos = m_vpos_orig;
 			if (!m_bEditActive)
 			{
 				glm::vec4 row2 = glm::row(m_mat4HMDPose, 2);
@@ -691,70 +738,53 @@ void llviewerVR::RenderControllerAxes()
 
 	if (!m_bVrActive || !gVrModSettings->handcontrollers) return;
 
+	S32 height = gViewerWindow->getWorldViewHeightScaled();
+	gCursorDiff = gViewerWindow->getWindowHeightScaled();
+	gCursorDiff = gCursorDiff - height;
+
 	gUIProgram.bind();
+	LLGLSLShader* shader { LLGLSLShader::sCurBoundShaderPtr };
+	LLGLDisable no_depth { GL_DEPTH_TEST };
+	LLGLDisable no_cull { GL_CULL_FACE };
+	// LLGLEnable blend { GL_BLEND };
+	LLGLDisable no_blend { GL_BLEND };
+	LLGLDisable noclamp { GL_DEPTH_CLAMP };
+	LLGLDisable noscissor {GL_SCISSOR_TEST };
+	LLGLSUIDefault gls_ui;
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+	gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
+	// LLVector3 v = gCurrentCameraPos;	
+	// glClear(GL_DEPTH_BUFFER_BIT);
+	// glDisable(GL_DEPTH_TEST);
+	gGL.pushMatrix();
+	// gGL.translatef(v.mV[VX], v.mV[VY], v.mV[VZ]);
+	gGL.begin(LLRender::LINES);
+    gGL.setLineWidth(4.0f);
+	gGL.color3f(1.0f, 1.0f, 1.0f);
+	gGL.vertex3f(0, 0, 0);
+	gGL.vertex3f(1, 1, 1);
 
 	for (uint32_t unTrackedDevice = xvr::HMD + 1; unTrackedDevice < xvr::MAXDEVICECOUNT; ++unTrackedDevice)
 	{
-		gCtrlscreen[unTrackedDevice].set(-1, -1);
-		
-		glm::mat4 mat;
-		if (!gHMD->getValidDevicePose((xvr::Device)unTrackedDevice, mat)) continue;
-		
-		glm::vec4 row2 = glm::row(mat, 2);
-		LLVector3 dir(row2.x, -row2.z, row2.y);
-
-		glm::vec4 row1 = glm::row(mat, 1);
-		LLVector3 up(row1.x, -row1.z, row1.y);
-
-		glm::vec4 row0 = glm::row(mat, 0);
-		LLVector3 left(row0.x, -row0.z, row0.y);
-
-		glm::vec4 row3 = glm::row(mat, 3);
-		gCtrlOrigin[unTrackedDevice].setVec(row3.x, -row3.z, row3.y);
-
-		LLQuaternion q1(dir, left, up);
-		LLQuaternion qCameraOrig(m_vdir_orig, m_vleft_orig, m_vup_orig);
-		float r3, p3, y3;
-		qCameraOrig.getEulerAngles(&r3, &p3, &y3);
-
-		LLQuaternion q3;
-		q3.setEulerAngles(0, 0, y3 - (m_fCamRotOffset * DEG_TO_RAD));
-		q1 = (q1)*q3;
-
-		LLMatrix3 m3 = q1.getMatrix3();
-		dir = m3.getFwdRow();
-		dir.normalize();
-
-		gCtrlOrigin[unTrackedDevice] -= gHmdPos;
-		gCtrlOrigin[unTrackedDevice] = m_vpos + gCtrlOrigin[unTrackedDevice] * q3;
-		gCtrlPos[unTrackedDevice] = gCtrlOrigin[unTrackedDevice]  - (dir * 10.0f);
-
-		posToScreen(gCtrlPos[unTrackedDevice], gCtrlscreen[unTrackedDevice], FALSE);
-		
-		S32 height = gViewerWindow->getWorldViewHeightScaled();
-		gCursorDiff= gViewerWindow->getWindowHeightScaled();
-		gCursorDiff = gCursorDiff - height;
-		gCtrlscreen[unTrackedDevice].mY -= gCursorDiff;
+		if (gCtrlscreen[unTrackedDevice].mX == -1 &&
+			gCtrlscreen[unTrackedDevice].mY == -1) continue;
 	
 		if (gVrModSettings->handlasers) {
-			LLGLSUIDefault gls_ui;
-			gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
-			LLVector3 v = gCurrentCameraPos;	
-			glClear(GL_DEPTH_BUFFER_BIT);
-			glDisable(GL_DEPTH_TEST);
-			gGL.pushMatrix();
-			gGL.translatef(v.mV[VX], v.mV[VY], v.mV[VZ]);
-			gGL.begin(LLRender::LINES);
-			gGL.color3f(1.0f, 0.0f, 0.0f);
+			if (unTrackedDevice == xvr::HMD + 1) gGL.color3f(1.0f, 0.0f, 0.0f); else gGL.color3f(0.0f, 0.0f, 1.0f);
 			gGL.vertex3f(gCtrlOrigin[unTrackedDevice].mV[VX], gCtrlOrigin[unTrackedDevice].mV[VY], gCtrlOrigin[unTrackedDevice].mV[VZ]);
 			gGL.vertex3f(gCtrlPos[unTrackedDevice].mV[VX], gCtrlPos[unTrackedDevice].mV[VY], gCtrlPos[unTrackedDevice].mV[VZ]);
-			gGL.end();
-			gGL.popMatrix();
-			glEnable(GL_DEPTH_TEST);
 		}
+		// fprintf(stdout, "gCtrlOrigin[%d]=%s\n", unTrackedDevice, glm::to_string(glm::make_vec3((gCtrlOrigin[unTrackedDevice]-gCtrlPos[unTrackedDevice]).mV)).c_str());
 
 		// TODO: xopenvr input integration for analog stick rotation and buttons
 	}
+	gGL.end();
+	gGL.popMatrix();
+	// glEnable(GL_DEPTH_TEST);
+	gGL.flush();
+    gGL.setLineWidth(1.0f);
+	if (shader) shader->bind();
 	gUIProgram.unbind();
 }
 

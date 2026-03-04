@@ -37,7 +37,9 @@ bool vrmod_llviewerdisplay_capture_and_continue_render() {
 
     // 1. Draw VR-specific overlays (axes/lasers) into the active buffer BEFORE we capture it.
     // This elegantly eliminates the need for separate injection hooks for these!
-   {
+    {
+        gViewerWindow->setup3DRender();
+        gVR.RenderControllerAxes();
         glm::mat4 saved_view = get_current_modelview();
         extern bool gSnapshot;
 
@@ -57,7 +59,6 @@ bool vrmod_llviewerdisplay_capture_and_continue_render() {
             gGL.popMatrix();
         }
    }
-   gVR.RenderControllerAxes();
 
     // 2. Capture the current framebuffer to the left/right eye texture and submit if ready.
     gVR.vrDisplay();
