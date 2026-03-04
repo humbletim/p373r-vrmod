@@ -8,10 +8,8 @@ on:
           required: true
           type: choice
           options:
-            - windows-latest
             - ubuntu-latest
             - ubuntu-slim
-            - macos-latest
           default: ubuntu-latest
         key:
             type: string
@@ -37,9 +35,6 @@ jobs:
     steps:
       - uses: actions/upload-artifact@v4
         if: false
-      - name: Expose GitHub Runtime environment variables
-        uses: crazy-max/ghaction-github-runtime@v3
-
       - name: Output Inputs
         shell: bash
         run: |
@@ -64,12 +59,6 @@ jobs:
             echo -n "$(basename $id)=$(git -C $id rev-parse --short HEAD),$(git -C $id rev-list --count HEAD),$(git -C $id describe --all --always | sed 's@heads/@@'); "
           done)"
 
-      - name: 'pip install pyyaml'
-        if: startsWith(inputs.runner, 'windows-')
-        shell: bash
-        run: |
-          pip install pyyaml
-
       - name: 'apt install clang-19 lld-19 python3-yaml'
         if: startsWith(inputs.runner, 'ubuntu-')
         shell: bash
@@ -87,34 +76,6 @@ jobs:
           wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
           git clone https://github.com/humbletim/firestorm-gha tpv-gha-nunja --single-branch --no-progress
 
-      - name: 'xwin-ubuntu'
-        if: startsWith(inputs.runner, 'ubuntu-')
-        id: xwin-ubuntu
-        uses: actions/cache/restore@v4
-        with:
-            path: bin/xwin
-            key: ${{ inputs.runner }}-${{ inputs.key }}-xwin
-
-      - name: ' ... xwin-ubuntu'
-        id: xwin-ubuntu-fetch
-        if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true'
-        shell: bash
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          wget -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
-          mkdir -pv bin
-          tar -C bin --wildcards --strip-components=1 -xvf xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \*/xwin
-          # gh --repo humbletim/xwin run download --name xwin-ubuntu --dir bin
-          # chmod a+x bin/xwin
-
-      - name: '/xwin-ubuntu'
-        if: startsWith(inputs.runner, 'ubuntu-') && steps.xwin-ubuntu.outputs.cache-hit != 'true' && steps.xwin-ubuntu-fetch.outcome == 'success'
-        uses: actions/cache/save@v4
-        with:
-            path: bin/xwin
-            key: ${{ steps.xwin-ubuntu.outputs.cache-primary-key }}
-
       - name: 'winsdk'
         if: startsWith(inputs.runner, 'ubuntu-')
         id: winsdk-ubuntu
@@ -127,9 +88,11 @@ jobs:
         id: winsdk-ubuntu-fetch
         if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true'
         shell: bash
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          wget -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
+          mkdir -pv bin
+          tar -C bin --wildcards --strip-components=1 -xvf xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \*/xwin
+          chmod a+x bin/xwin
           mkdir -pv tmp
           SDKVER=10.0.26100
           CRTVER=14.44.17.14
@@ -143,13 +106,6 @@ jobs:
         with:
             path: winsdk
             key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
-
-      - name: ' ... winsdk-windows'
-        id: winsdk-windows-emulate
-        if: startsWith(inputs.runner, 'windows-')
-        shell: bash
-        run: |
-          ./p373r-vrmod/experiments/winsdk.in/other/vs-emulate-xwin.bat
 
       - name: 'ARTIFACT:'
         id: artifact
@@ -167,7 +123,6 @@ jobs:
         run: |
           wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip
           unzip -q fs-open-80036-afc53db-afc53db-devtime.zip
-          #gh --repo humbletim/firestorm-gha run download --name ${{inputs.artifact}} --dir _snapshot
 
       - name: '/ARTIFACT'
         if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
@@ -196,13 +151,14 @@ jobs:
           ../experiments/tpvm.sh init ../../fs-open
           ../experiments/tpvm.sh patch llviewerdisplay.cpp
           ../experiments/tpvm.sh mod lldir_win32.cpp
-          ../experiments/tpvm.sh compile_ llviewerdisplay.cpp
-          ../experiments/tpvm.sh compile_ lldir_win32.cpp
-          ../experiments/tpvm.sh compile_ vrmod.llviewerdisplay.hpp 
-          ../experiments/tpvm.sh compile_ llviewerVR.cpp 
-          ../experiments/tpvm.sh compile_ ../asdf/humbletim/xopenvr.hpp
-          ../experiments/tpvm.sh compile_ ../asdf/humbletim/opengl.hpp 
-          ../experiments/tpvm.sh link
+          make fs-open.exe -j
+          # ../experiments/tpvm.sh compile_ llviewerdisplay.cpp
+          # ../experiments/tpvm.sh compile_ lldir_win32.cpp
+          # ../experiments/tpvm.sh compile_ vrmod.llviewerdisplay.hpp 
+          # ../experiments/tpvm.sh compile_ llviewerVR.cpp 
+          # ../experiments/tpvm.sh compile_ ../asdf/humbletim/xopenvr.hpp
+          # ../experiments/tpvm.sh compile_ ../asdf/humbletim/opengl.hpp 
+          # ../experiments/tpvm.sh link
 
       - name: '  edge-compile new viewer exe'
         shell: bash
@@ -213,7 +169,7 @@ jobs:
       - name: '/UPLOAD'
         uses: actions/upload-artifact@v4
         with:
-            name: ${{ inputs.runner }}-${{ inputs.key }}-3p-community-vrmod
+            name: ${{ inputs.key }}-3p-community-vrmod-autobuild-package
             path: p373r-vrmod/community/community-vrmod-*.tar.*
 
       - name: '/UPLOAD 3p'
@@ -223,17 +179,17 @@ jobs:
             path: p373r-vrmod/community/fs-open.exe
 
       - name: Setup no-frills tmate session
-        if: failure() || inputs.tmate-followup && inputs.runner == 'windows-latest'
+        if: failure() || inputs.tmate-followup
         uses: ./p373r-vrmod/.github/nofrills-tmate
         env:
             GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           limit-access-to-actor: true
 
-      - name: Setup fallback tmate session
-        if: failure() || inputs.tmate-followup
-        uses: mxschmitt/action-tmate@v3
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          limit-access-to-actor: true
+      # - name: Setup fallback tmate session
+      #   if: failure() || inputs.tmate-followup
+      #   uses: mxschmitt/action-tmate@v3
+      #   env:
+      #       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     limit-access-to-actor: true
