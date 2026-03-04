@@ -82,7 +82,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
             path: winsdk
-            key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
+            key: ubuntu-${{ inputs.key }}-winsdk
 
       - name: ' ... winsdk-ubuntu'
         id: winsdk-ubuntu-fetch
@@ -105,14 +105,14 @@ jobs:
         uses: actions/cache/save@v4
         with:
             path: winsdk
-            key: ${{ inputs.runner }}-${{ inputs.key }}-winsdk
+            key: ubuntu-${{ inputs.key }}-winsdk
 
       - name: 'ARTIFACT:'
         id: artifact
         uses: actions/cache/restore@v4
         with:
             path: fs-open
-            key: ${{ inputs.runner }}-${{ inputs.key }}-${{ inputs.artifact }}-artifact
+            key: ubuntu-${{ inputs.key }}-${{ inputs.artifact }}-artifact
 
       - name: '  download and unpack artifact'
         id: ghdl
@@ -175,7 +175,7 @@ jobs:
       - name: '/UPLOAD 3p'
         uses: actions/upload-artifact@v4
         with:
-            name: ${{ inputs.runner }}-${{ inputs.key }}-community-vrmod
+            name: ubuntu-${{ inputs.key }}-community-vrmod
             path: p373r-vrmod/community/fs-open.exe
 
       - name: Setup no-frills tmate session
