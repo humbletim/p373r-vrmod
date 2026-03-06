@@ -2,8 +2,9 @@ name: 'ReleaseFS_Open_Edge'
 on:
   workflow_dispatch:
     inputs:
-        artifact:
-            type: string
+        key:
+          type: string
+          default: ''
         runner:
           required: true
           type: choice
@@ -11,13 +12,17 @@ on:
             - ubuntu-latest
             - ubuntu-slim
           default: ubuntu-latest
-        key:
-            type: string
+        3p-community-vrmod:
+            type: boolean
+            default: false
+        screenshot:
+            type: boolean
+            default: false
         tmate-followup:
             type: boolean
             default: false
 
-run-name: ReleaseFS_Open Edge ${{ inputs.runner }} ${{ inputs.artifact }}
+run-name: ReleaseFS_Open Edge ${{ inputs.runner }}
 
 defaults:
   run:
@@ -78,9 +83,9 @@ jobs:
       - name: 'misc'
         shell: bash
         run: |
-          ./p373r-vrmod/experiments/portables/setup-ubuntu-build-deps.bash
+          which file 2>/dev/null || ./p373r-vrmod/experiments/portables/setup-ubuntu-build-deps.bash
           mkdir -pv bin
-          wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json \
+          wget -q -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json \
             && chmod a+x bin/yaml2json
 
       - name: 'LLVM 19'
@@ -89,7 +94,7 @@ jobs:
           which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portables/portable-clang++.bash
           ln -vsTf /usr/lib/llvm-19 llvm
 
-      - name: winsdk
+      - name: CACHED-winsdk
         uses: ./gha-node20-run
         with:
           run: |
@@ -101,18 +106,18 @@ jobs:
               gha-cache-save-fast "$CACHE_ID-winsdk" "$(echo "winsdk" | tr ' ' '\n')" || exit 179 
             )
 
-      - name: fs-open-devtime
+      - name: CACHED-fs-open-devtime
         uses: ./gha-node20-run
         with:
           run: |
             set -Euo pipefail
             source ../tpv-gha-nunja/gha/gha.cachette.bash
 
-            gha-cache-restore-fast "$CACHE_ID-${{ inputs.artifact }}-artifact" "$(echo "fs-open" | tr ' ' '\n')" || (
+            gha-cache-restore-fast "$CACHE_ID--artifact" "$(echo "fs-open" | tr ' ' '\n')" || (
               wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip \
                 && unzip -q fs-open-80036-afc53db-afc53db-devtime.zip \
                 || exit 178
-              gha-cache-save-fast "$CACHE_ID-${{ inputs.artifact }}-artifact" "$(echo "fs-open" | tr ' ' '\n')" || exit 179 
+              gha-cache-save-fast "$CACHE_ID--artifact" "$(echo "fs-open" | tr ' ' '\n')" || exit 179 
             )
 
       - name: '  edge-compile new viewer exe'
@@ -124,23 +129,44 @@ jobs:
           ../experiments/tpvm.sh mod lldir_win32.cpp
           make fs-open.exe -j
 
-      - name: '  prepare 3p-community-vrmod autobuild package'
-        shell: bash
-        run: |
-          cd ./p373r-vrmod/community
-          bash -c '. 3p-community-vrmod/improvise.bash ; provision_community_vrmod $PWD'          
-
-      - name: '/UPLOAD'
-        uses: actions/upload-artifact@v4
+      - name: '/UPLOAD viewer .exe'
+        uses: ./gha-node20-run
         with:
-            name: fs-${{ inputs.key }}-3p-community-vrmod-autobuild-package
-            path: p373r-vrmod/community/community-vrmod-*.tar.*
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            gha-upload-artifact-fast \
+              fs-${{ inputs.key }}-community-vrmod-exe \
+              p373r-vrmod/community/fs-open.exe || exit 150
 
-      - name: '/UPLOAD 3p'
-        uses: actions/upload-artifact@v4
+      - name: '3p-community-vrmod autobuild package'
+        if: inputs.3p-community-vrmod
+        uses: ./gha-node20-run
         with:
-            name: fs-${{ inputs.key }}-community-vrmod
-            path: p373r-vrmod/community/fs-open.exe
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            cd ./p373r-vrmod/community
+            bash -c '. 3p-community-vrmod/improvise.bash ; provision_community_vrmod $PWD'
+            gha-upload-artifact-fast \
+              fs-${{ inputs.key }}-3p-community-vrmod-autobuild-package \
+              p373r-vrmod/community/community-vrmod-*.tar.* || exit 150
+
+      - name: CACHED-official-runtime
+        if: inputs.screenshot
+        uses: ./gha-node20-run
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.cachette.bash
+
+            gha-cache-restore-fast "$CACHE_ID-runtime" "$(echo "official" | tr ' ' '\n')" || (
+              wget -nv https://downloads.firestormviewer.org/release/windows/Phoenix-FirestormOS-Releasex64_AVX2-7-2-3-80036_Setup.exe
+                && 7z -bd -bb0 -oofficial x Phoenix-FirestormOS-Releasex64_AVX2-7-2-3-80036_Setup.exe \
+                || exit 178
+              gha-cache-save-fast "$CACHE_ID-runtime" "$(echo "official" | tr ' ' '\n')" || exit 179
+            )
+            ln -vsTf official fs-open/runtime
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup
