@@ -27,7 +27,7 @@ env:
   TZ: America/New_York
   CACHE_ID: ubuntu-latest-${{ inputs.key }}-winsdk
   node: /usr/local/bin/node
-  _actions: ${{ runner.temp }}/../_actions
+  _actions: /home/runneradmin/work/_actions
 
 permissions:
   actions: write
