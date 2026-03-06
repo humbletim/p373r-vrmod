@@ -161,7 +161,7 @@ jobs:
             source ../tpv-gha-nunja/gha/gha.cachette.bash
 
             gha-cache-restore-fast "$CACHE_ID-runtime" "$(echo "official" | tr ' ' '\n')" || (
-              wget -nv https://downloads.firestormviewer.org/release/windows/Phoenix-FirestormOS-Releasex64_AVX2-7-2-3-80036_Setup.exe
+              wget -nv https://downloads.firestormviewer.org/release/windows/Phoenix-FirestormOS-Releasex64_AVX2-7-2-3-80036_Setup.exe \
                 && 7z -bd -bb0 -oofficial x Phoenix-FirestormOS-Releasex64_AVX2-7-2-3-80036_Setup.exe \
                 || exit 178
               gha-cache-save-fast "$CACHE_ID-runtime" "$(echo "official" | tr ' ' '\n')" || exit 179
