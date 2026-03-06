@@ -63,6 +63,8 @@ jobs:
       - name: preflight check
         uses: ./gha-node20-run
         with:
+          environment: |
+            DEBUG=true
           run: |
             echo "hi from within node-20-run!"
 
