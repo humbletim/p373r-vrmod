@@ -25,7 +25,7 @@ defaults:
 
 env:
   TZ: America/New_York
-  CACHE_ID: ubuntu-latest-${{ inputs.key }}-winsdk
+  CACHE_ID: ubuntu-latest-${{ inputs.key }}
   node: /usr/local/bin/node
   _actions: /home/runner/work/_actions
 
@@ -59,6 +59,12 @@ jobs:
           2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
           git clone https://github.com/humbletim/firestorm-gha ../tpv-gha-nunja --single-branch --no-progress
           ln -s ../tpv-gha-nunja/gha-node20-run
+
+      - name: preflight check
+        uses: ./gha-node20-run
+        with:
+          run: |
+            echo "hi from within node-20-run!"
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
