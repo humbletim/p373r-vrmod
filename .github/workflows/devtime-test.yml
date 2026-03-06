@@ -87,6 +87,7 @@ jobs:
         shell: bash
         run: |
           which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portables/portable-clang++.bash
+          ln -vsTf /usr/lib/llvm-19 llvm
 
       - name: winsdk
         uses: ./gha-node20-run
