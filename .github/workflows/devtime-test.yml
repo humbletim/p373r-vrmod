@@ -69,12 +69,13 @@ jobs:
         run: |
           ./p373r-vrmod/experiments/portables/setup-ubuntu-build-deps.bash
           mkdir -pv bin
-          wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
+          wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json \
+            && chmod a+x bin/yaml2json
 
       - name: 'LLVM 19'
         shell: bash
         run: |
-          which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portabls/portable-clang++.bash
+          which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portables/portable-clang++.bash
 
       - name: winsdk
         uses: ./gha-node20-run
@@ -131,11 +132,9 @@ jobs:
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup
-        uses: ./p373r-vrmod/.github/nofrills-tmate
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ./gha-node20-run
         with:
-          limit-access-to-actor: true
+          run: ./p373r-vrmod/.github/nofrills-tmate/action.bash
 
       # - name: Setup fallback tmate session
       #   if: failure() || inputs.tmate-followup

@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# DO NOT use 'set -e'. We need to manually control error checking.
+
+export PATH=/bin:/usr/bin:/c/msys64/usr/bin:/c/Program\ Files/GitHub\ CLI:/c/Program\ Files/Git/bin:/c/Program\ Files/LLVM/bin:$PATH
+export HOME=${GITHUB_WORKSPACE}
+SOCKET_FILE=${GITHUB_WORKSPACE}/tmate.sock
+TMATE_LOG=${GITHUB_WORKSPACE}/tmate-daemon.log
+
+echo "--- 1. Installing dependencies (tmate, curl, jq) ---"
+if which pacman 2>/dev/null ; then
+    pacman -Sy --noconfirm --needed tmate curl jq coreutils > /dev/null || exit 1
+else
+    sudo apt install tmate curl jq coreutils > /dev/null || exit 1
+fi
+
+which tmate || exit 2
+tmate -V || exit 3
+
+echo "--- 2. Fetching SSH keys for $GITHUB_ACTOR ---"
+mkdir -p ${HOME}/.ssh || exit 11
+curl -s "https://api.github.com/users/$GITHUB_ACTOR/keys" | \
+        jq -r '.[].key' > ${HOME}/.ssh/authorized_keys || exit 12
+chmod 600 ${HOME}/.ssh/authorized_keys || exit 13
+
+echo "--- 3. Forcing tmate to start in background ---"
+tmate -S ${SOCKET_FILE} \
+    -a ${HOME}/.ssh/authorized_keys \
+    set-option -g status on \; \
+    set-option -g status-position top \; \
+    set-option -g default-terminal "screen-256color" \; \
+    set-option -g default-command "bash" \; \
+    new-session -d > ${TMATE_LOG} 2>&1 
+
+TMATE_PID=$!
+echo "Tmate starting in background (PID: $TMATE_PID). Logging to ${TMATE_LOG}."
+
+echo "--- 3.5. Polling for tmate-ready (max 15s) ---"
+timeout 15 tmate -S ${SOCKET_FILE} wait tmate-ready
+
+echo "--- 4. Polling for valid SSH string (max 15s) ---"
+TMATE_SSH=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_ssh}' 2>/dev/null || echo "")
+if [[ -z "${TMATE_SSH}" || "${TMATE_SSH}" == "#tmate_ssh" ]]; then
+    echo "error getting tmate_ssh"
+    exit 53
+fi
+echo "-------------------------------------"
+echo "$TMATE_SSH"
+echo "-------------------------------------"
+echo "Create a file named 'continue' in the repo root to proceed."
+
+echo "--- 5. Waiting for connection or exit signal ---"
+TIMEOUT=${inputs_timeout:-300} # 5 minutes
+START_TIME=$(date +%s)
+CLIENT_CONNECTED=0
+
+while true; do
+    if [[ -f "${GITHUB_WORKSPACE}/continue" ]]; then
+    echo "Found 'continue' file. Ending tmate session."
+    break
+    fi
+    if [[ ! -e ${SOCKET_FILE} ]]; then
+    echo "Tmate session ended (socket file gone)."
+    break
+    fi
+
+    CURRENT_TIME=$(date +%s)
+    ELAPSED=$((CURRENT_TIME - START_TIME))
+
+    if [[ $CLIENT_CONNECTED -eq 0 ]]; then
+    CLIENT_COUNT=$(tmate -S ${SOCKET_FILE} display -p '#{tmate_num_clients}' 2>/dev/null || echo "")
+    
+    # --- FIX: Use REGEX to check if it's a number ---
+    if ! [[ "${CLIENT_COUNT}" =~ ^[0-9]+$ ]]; then
+        echo "Client count read error, got: '${CLIENT_COUNT}'. Assuming 0."
+        CLIENT_COUNT=0
+    fi
+
+    if [[ $CLIENT_COUNT -ne 0 ]]; then # Use numeric comparison
+        echo "Client connected! (Count: $CLIENT_COUNT). Disarming 5-minute idle timeout."
+        CLIENT_CONNECTED=1
+    else
+        if [[ $ELAPSED -gt $TIMEOUT ]]; then
+        echo "Tmate session timed out after 5 minutes (no connection)."
+        break
+        else
+        REMAINING=$((TIMEOUT - ELAPSED))
+        echo "Waiting for client connection ($REMAINING seconds remaining)..."
+        fi
+    fi
+    else
+    echo "Client connected. Waiting for session to end ($ELAPSED elapsed seconds)..."
+    sleep 15
+    fi
+    sleep 5
+done
+
+echo "--- 6. Cleanup ---"
+[[ -e ${SOCKET_FILE} ]] && tmate -S ${SOCKET_FILE} kill-session || echo "Tmate session already closed."
