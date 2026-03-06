@@ -150,7 +150,7 @@ jobs:
             bash -c '. 3p-community-vrmod/improvise.bash ; provision_community_vrmod $PWD'
             gha-upload-artifact-fast \
               fs-${{ inputs.key }}-3p-community-vrmod-autobuild-package \
-              p373r-vrmod/community/community-vrmod-*.tar.* || exit 150
+              community-vrmod-*.tar.* || exit 150
 
       - name: CACHED-official-runtime
         uses: ./gha-node20-run
