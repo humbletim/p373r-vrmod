@@ -166,7 +166,20 @@ jobs:
                 || exit 178
               gha-cache-save-fast "$CACHE_ID-runtime" "$(echo "official" | tr ' ' '\n')" || exit 179
             )
-            ln -vsTf official fs-open/runtime
+            ( cd fs-open && ln -vsTf ../official runtime )
+
+      - name: wine/xvfb/screenshot stuff
+        uses: ./gha-node20-run
+        if: inputs.screenshot
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            ./p373r-vrmod/experiments/portables/setup-ubuntu-xvfb.bash
+            wine --version
+            cd p373r-vrmod/community
+            ../asdf/manual_screenshot.sh
+            gha-upload-artifact-fast screenshot-region screenshot-region.jpg || exit 150
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup
