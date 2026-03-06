@@ -82,7 +82,7 @@ jobs:
         with:
           run: |
             set -Euo pipefail
-            source ../tpv-gha-nunja/gha.cachette.bash
+            source ../tpv-gha-nunja/gha/gha.cachette.bash
 
             gha-cache-restore-fast "$CACHE_ID-winsdk" "$(echo "winsdk" | tr ' ' '\n')" || (
               ./p373r-vrmod/experiments/portables/portable-winsdk.bash || exit 178
@@ -94,7 +94,7 @@ jobs:
         with:
           run: |
             set -Euo pipefail
-            source ../tpv-gha-nunja/gha.cachette.bash
+            source ../tpv-gha-nunja/gha/gha.cachette.bash
 
             gha-cache-restore-fast "$CACHE_ID-${{ inputs.artifact }}-artifact" "$(echo "fs-open" | tr ' ' '\n')" || (
               wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip \
