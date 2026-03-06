@@ -65,6 +65,7 @@ jobs:
         with:
           environment: |
             DEBUG=true
+          shell: bash --noprofile --norc -e -o pipefail {0}
           run: |
             echo "hi from within node-20-run!"
 
