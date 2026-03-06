@@ -28,7 +28,7 @@ export WINEARCH=win64
 export WINEDEBUG=${WINEDEBUG:-"-all"}
 export WINEDLLOVERRIDES=${WINEDLLOVERRIDES:-"winedbg.exe=d"}
 
-which $WINEPATH || { echo "no WINEPATH '$WINEPATH'" ; exit 30; }
+test -d $WINEPATH || { echo "no WINEPATH '$WINEPATH'" ; exit 30; }
 
 XVFB_PID=
 VIEWER_PID=
