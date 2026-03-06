@@ -26,7 +26,7 @@ defaults:
 env:
   TZ: America/New_York
   CACHE_ID: ubuntu-latest-${{ inputs.key }}
-  xnode: /usr/local/bin/node
+  node: /usr/local/bin/node
   _actions: /home/runner/work/_actions
 
 permissions:
@@ -63,11 +63,8 @@ jobs:
       - name: preflight check
         uses: ./gha-node20-run
         with:
-          environment: |
-            DEBUG=true
-          shell: bash --noprofile --norc -e -o pipefail {0}
-          run: |
-            echo "hi from within node-20-run!"
+          environment: DEBUG=true
+          run: echo "hi from within node-20-run!"
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
