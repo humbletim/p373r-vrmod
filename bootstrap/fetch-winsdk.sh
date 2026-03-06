@@ -25,7 +25,7 @@ else
     mkdir -p "$TMP_DIR/cache"
     "$TMP_DIR/bin/xwin" --accept-license -Loff --cache-dir="$TMP_DIR/cache" --variant "$VARIANTS" --crt-version "$CRTVER" --sdk-version "$SDKVER" splat --output "$TARGET_DIR"
 
-    touch "$TARGET_DIR/vfsoverlay.json"
+    # touch "$TARGET_DIR/vfsoverlay.json"
 
     rm -rf "$TMP_DIR"
     echo "[$0] winsdk successfully fetched to $TARGET_DIR."

@@ -25,6 +25,9 @@ defaults:
 
 env:
   TZ: America/New_York
+  CACHE_ID: ubuntu-latest-${{ inputs.key }}-winsdk
+  node: /usr/local/bin/node
+  _actions: ~/work/_actions
 
 permissions:
   actions: write
@@ -42,13 +45,15 @@ jobs:
           ${{ toJSON(github.event.inputs) }}
           EOF
 
-      - name: Checkout p373r-vrmod workspace
+      - name: 'Checkout p373r-vrmod and ../tpv-gha-nunja workspace'
         shell: bash
         run: |
           git clone --no-progress --quiet --filter=tree:0 --single-branch \
             https://github.com/humbletim/p373r-vrmod \
             --branch ${GITHUB_REF_NAME} p373r-vrmod \
           2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
+          git clone https://github.com/humbletim/firestorm-gha ../tpv-gha-nunja --single-branch --no-progress
+          ln -s ../tpv-gha-nunja/gha-node20-run
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
       - name: annotation
@@ -59,108 +64,54 @@ jobs:
             echo -n "$(basename $id)=$(git -C $id rev-parse --short HEAD),$(git -C $id rev-list --count HEAD),$(git -C $id describe --all --always | sed 's@heads/@@'); "
           done)"
 
-      - name: 'apt install clang-19 lld-19 python3-yaml'
-        if: startsWith(inputs.runner, 'ubuntu-')
+      - name: 'misc'
         shell: bash
         run: |
-          echo apt update
-          sudo apt update -qq -o=Dpkg::Use-Pty=0 2>&1 > /dev/null
-          echo apt install gettext-base python3-yaml file eatmydata nano
-          sudo apt install -y -qq -o=Dpkg::Use-Pty=0 gettext-base python3-yaml file eatmydata nano 2>&1 > /dev/null
-          which clang-19 || {
-            echo apt install clang-19 lld-19
-            sudo eatmydata apt install -y -qq -o=Dpkg::Use-Pty=0 clang-19 lld-19 2>&1 > /dev/null
-          }
-
+          ./p373r-vrmod/experiments/portables/setup-ubuntu-build-deps.bash
           mkdir -pv bin
           wget -nv https://github.com/bronze1man/yaml2json/releases/download/v1.3.5/yaml2json_linux_amd64 -O bin/yaml2json
-          git clone https://github.com/humbletim/firestorm-gha tpv-gha-nunja --single-branch --no-progress
 
-      - name: 'winsdk'
-        if: startsWith(inputs.runner, 'ubuntu-')
-        id: winsdk-ubuntu
-        uses: actions/cache/restore@v4
-        with:
-            path: winsdk
-            key: ubuntu-latest-${{ inputs.key }}-winsdk
-
-      - name: ' ... winsdk-ubuntu'
-        id: winsdk-ubuntu-fetch
-        if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true'
+      - name: 'LLVM 19'
         shell: bash
         run: |
-          wget -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz
-          mkdir -pv bin
-          tar -C bin --wildcards --strip-components=1 -xvf xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \*/xwin
-          chmod a+x bin/xwin
-          mkdir -pv tmp
-          SDKVER=10.0.26100
-          CRTVER=14.44.17.14
-          VARIANTS=desktop
-          SDKROOT=winsdk
-          bin/xwin --accept-license -Loff --cache-dir=tmp --variant $VARIANTS --crt-version $CRTVER --sdk-version $SDKVER splat --output $SDKROOT
+          which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portabls/portable-clang++.bash
 
-      - name: '/winsdk-ubuntu'
-        if: startsWith(inputs.runner, 'ubuntu-') && steps.winsdk-ubuntu.outputs.cache-hit != 'true' && steps.winsdk-ubuntu-fetch.outcome == 'success'
-        uses: actions/cache/save@v4
+      - name: winsdk
+        uses: ./gha-node20-run
         with:
-            path: winsdk
-            key: ubuntu-latest-${{ inputs.key }}-winsdk
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha.cachette.bash
 
-      - name: 'ARTIFACT:'
-        id: artifact
-        uses: actions/cache/restore@v4
+            gha-cache-restore-fast "$CACHE_ID-winsdk" "$(echo "winsdk" | tr ' ' '\n')" || (
+              ./p373r-vrmod/experiments/portables/portable-winsdk.bash || exit 178
+              gha-cache-save-fast "$CACHE_ID-winsdk" "$(echo "winsdk" | tr ' ' '\n')" || exit 179 
+            )
+
+      - name: fs-open-devtime
+        uses: ./gha-node20-run
         with:
-            path: fs-open
-            key: ubuntu-latest-${{ inputs.key }}-${{ inputs.artifact }}-artifact
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha.cachette.bash
 
-      - name: '  download and unpack artifact'
-        id: ghdl
-        if: steps.artifact.outputs.cache-hit != 'true'
-        shell: bash
-        env:
-            GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip
-          unzip -q fs-open-80036-afc53db-afc53db-devtime.zip
-
-      - name: '/ARTIFACT'
-        if: always() && steps.artifact.outputs.cache-hit != 'true' && steps.ghdl.outcome == 'success'
-        uses: actions/cache/save@v4
-        with:
-            path: fs-open
-            key: ${{ steps.artifact.outputs.cache-primary-key }}
-
-      - name: '  system symlinks'
-        if: startsWith(inputs.runner, 'ubuntu-')
-        shell: bash
-        run: |
-          sudo mkdir /d
-          sudo ln -vsTf ~/work /d/a
-          sudo mkdir -p '/c/Program Files/nodejs'
-          sudo ln -vsTf /usr/local/bin/node '/c/Program Files/nodejs/node'
-          sudo ln -vsTf /usr/lib/llvm-19 llvm
+            gha-cache-restore-fast "$CACHE_ID-${{ inputs.artifact }}-artifact" "$(echo "fs-open" | tr ' ' '\n')" || (
+              wget -nv https://github.com/humbletim/firestorm-gha/releases/download/v7.2.3-vr-alpha-0/fs-open-80036-afc53db-afc53db-devtime.zip \
+                && unzip -q fs-open-80036-afc53db-afc53db-devtime.zip \
+                || exit 178
+              gha-cache-save-fast "$CACHE_ID-${{ inputs.artifact }}-artifact" "$(echo "fs-open" | tr ' ' '\n')" || exit 179 
+            )
 
       - name: '  edge-compile new viewer exe'
         shell: bash
         run: |
-          ln -vsTf $PWD/llvm p373r-vrmod/llvm
-          ln -vsTf $PWD/winsdk p373r-vrmod/winsdk
-          touch winsdk/vfsoverlay.json 
           cd ./p373r-vrmod/community
           ../experiments/tpvm.sh init ../../fs-open
           ../experiments/tpvm.sh patch llviewerdisplay.cpp
           ../experiments/tpvm.sh mod lldir_win32.cpp
           make fs-open.exe -j
-          # ../experiments/tpvm.sh compile_ llviewerdisplay.cpp
-          # ../experiments/tpvm.sh compile_ lldir_win32.cpp
-          # ../experiments/tpvm.sh compile_ vrmod.llviewerdisplay.hpp 
-          # ../experiments/tpvm.sh compile_ llviewerVR.cpp 
-          # ../experiments/tpvm.sh compile_ ../asdf/humbletim/xopenvr.hpp
-          # ../experiments/tpvm.sh compile_ ../asdf/humbletim/opengl.hpp 
-          # ../experiments/tpvm.sh link
 
-      - name: '  edge-compile new viewer exe'
+      - name: '  prepare 3p-community-vrmod autobuild package'
         shell: bash
         run: |
           cd ./p373r-vrmod/community
@@ -169,13 +120,13 @@ jobs:
       - name: '/UPLOAD'
         uses: actions/upload-artifact@v4
         with:
-            name: ${{ inputs.key }}-3p-community-vrmod-autobuild-package
+            name: fs-${{ inputs.key }}-3p-community-vrmod-autobuild-package
             path: p373r-vrmod/community/community-vrmod-*.tar.*
 
       - name: '/UPLOAD 3p'
         uses: actions/upload-artifact@v4
         with:
-            name: ubuntu-latest-${{ inputs.key }}-community-vrmod
+            name: fs-${{ inputs.key }}-community-vrmod
             path: p373r-vrmod/community/fs-open.exe
 
       - name: Setup no-frills tmate session
