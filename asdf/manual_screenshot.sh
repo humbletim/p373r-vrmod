@@ -1,7 +1,6 @@
 #!/bin/bash
 test -f /tmp/.X99-lock && { echo "/tmp/.X99-lock exists..." ; exit 21; }
 base_name=${base_name:-$(cat env/base_name)}
-test ! -d "${base_name}" || SNAPSHOT_DIR=${base_name}
 SNAPSHOT_DIR=${SNAPSHOT_DIR:-"../_snapshot/${base_name}"}
 
 HERE=$PWD
