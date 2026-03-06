@@ -12,7 +12,7 @@ on:
             - ubuntu-latest
             - ubuntu-slim
           default: ubuntu-latest
-        3p-community-vrmod:
+        autobuild-package:
             type: boolean
             default: false
         screenshot:
@@ -139,9 +139,9 @@ jobs:
               fs-${{ inputs.key }}-community-vrmod-exe \
               p373r-vrmod/community/fs-open.exe || exit 150
 
-      - name: '3p-community-vrmod autobuild package'
-        if: inputs.3p-community-vrmod
+      - name: '3p-community-vrmod autobuild-package'
         uses: ./gha-node20-run
+        if: inputs.autobuild-package
         with:
           run: |
             set -Euo pipefail
@@ -153,8 +153,8 @@ jobs:
               p373r-vrmod/community/community-vrmod-*.tar.* || exit 150
 
       - name: CACHED-official-runtime
-        if: inputs.screenshot
         uses: ./gha-node20-run
+        if: inputs.screenshot
         with:
           run: |
             set -Euo pipefail
