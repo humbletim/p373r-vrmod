@@ -178,7 +178,7 @@ jobs:
             ./p373r-vrmod/experiments/portables/setup-ubuntu-xvfb.bash
             wine --version
             cd p373r-vrmod/community
-            WINEPATH=../../official ../asdf/manual_screenshot.sh
+            WINEPATH=../../official ../asdf/manual_screenshot.sh || true
             gha-upload-artifact-fast screenshot-region screenshot-region.jpg || exit 150
 
       - name: Setup no-frills tmate session
