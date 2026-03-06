@@ -36,8 +36,13 @@ jobs:
   debug:
     runs-on: ${{ inputs.runner }}
     steps:
-      - uses: actions/upload-artifact@v4
+      - name: ensure actions/upload-artifact
+        uses: actions/upload-artifact@v4
         if: false
+      - name: ensure actions/cache
+        uses: actions/cache@v4
+        if: false
+
       - name: Output Inputs
         shell: bash
         run: |
