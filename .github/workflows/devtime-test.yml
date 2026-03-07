@@ -58,17 +58,16 @@ jobs:
       - name: 'Checkout p373r-vrmod and ../tpv-gha-nunja workspace'
         shell: bash
         run: |
-          git clone --no-progress --quiet --filter=tree:0 --single-branch \
-            https://github.com/humbletim/p373r-vrmod \
-            --branch ${GITHUB_REF_NAME} p373r-vrmod \
-          2>&1 | sed -E '/^(remote:|Receive|Resolve)/d'
-          git clone https://github.com/humbletim/firestorm-gha ../tpv-gha-nunja --single-branch --no-progress
+          clone() { git clone --no-progress --quiet --filter=tree:0 --single-branch "$@" ; }
+          clone https://github.com/humbletim/p373r-vrmod --branch ${GITHUB_REF_NAME} ./p373r-vrmod
+          clone https://github.com/humbletim/firestorm-gha ../tpv-gha-nunja
           ln -s ../tpv-gha-nunja/gha-node20-run
 
       - name: preflight check
         uses: ./gha-node20-run
+        env:
+          DEBUG: true
         with:
-          environment: DEBUG=true
           run: echo "hi from within node-20-run!"
 
       # memorialize the fstuple input for posterity; annotations seem survive longer (ie: > 6 months) than step summaries or raw logs
@@ -137,7 +136,7 @@ jobs:
             source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
             gha-upload-artifact-fast \
               fs-${{ inputs.key }}-community-vrmod-exe \
-              p373r-vrmod/community/fs-open.exe || exit 150
+              p373r-vrmod/community/fs-open.exe 1 9 || exit 150
 
       - name: '3p-community-vrmod autobuild-package'
         uses: ./gha-node20-run
@@ -178,7 +177,7 @@ jobs:
             ./p373r-vrmod/experiments/portables/setup-ubuntu-xvfb.bash
             wine --version
             cd p373r-vrmod/community
-            WINEPATH=../../official ../asdf/manual_screenshot.sh || true
+            TIMEOUT=60 WINEPATH=../../official ../asdf/manual_screenshot.sh || true
             gha-upload-artifact-fast screenshot-region screenshot-region.jpg || exit 150
 
       - name: Setup no-frills tmate session
