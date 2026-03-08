@@ -94,6 +94,7 @@ jobs:
             && chmod a+x bin/yaml2json
 
       - name: 'LLVM 19'
+        if: inputs.executable
         shell: bash
         run: |
           which clang++19 2>/dev/null || ./p373r-vrmod/experiments/portables/portable-clang++.bash
@@ -200,7 +201,7 @@ jobs:
               mkdir -pv devspace/ devspace/bin #devspace/winsdk
               test ! -d devspace/pg && wget -q -nv https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/PortableGit-2.53.0-64-bit.7z.exe \
                 && 7z -bd -bb0 -odevspace/pg x PortableGit-2.53.0-64-bit.7z.exe
-              test ! -d devspace/llvm-19.1.0.tar.xz \
+              test ! -d devspace/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz \
                 && wget -O devspace/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz -q -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz
                 # && xz -d -c clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xf - -Cdevspace/llvm --strip-components=1
               test ! -s devspace/bin/ninja.exe && wget -q -nv https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip \
@@ -213,7 +214,7 @@ jobs:
               # test ! -s devspace/bin/xwin.exe && wget -q -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz \
                 # && tar -xf xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz -Cdevspace/bin --strip-components=1 xwin-0.8.0-x86_64-pc-windows-msvc/xwin.exe
               # test ! -s devspace/winsdk.tar.xz && XZ_OPT='-T0' tar -cJf devspace/winsdk.tar.xz winsdk
-                test ! -d devspace/winsdk/crt && sudo mount -o bind winsdk devspace/winsdk
+              test ! -d devspace/winsdk/crt && mkdir -pv devspace/winsdk && sudo mount -o bind winsdk devspace/winsdk
 
               cd devspace/
               (
