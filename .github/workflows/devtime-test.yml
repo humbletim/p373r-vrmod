@@ -197,7 +197,7 @@ jobs:
             source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
             function provision_devspace() {(
               set -Euo pipefail
-              mkdir -pv devspace/
+              mkdir -pv devspace/ devspace/llvm devspace/bin
               wget -q -nv https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/PortableGit-2.53.0-64-bit.7z.exe \
                 && 7z -bd -bb0 -odevspace/pg x PortableGit-2.53.0-64-bit.7z.exe
               wget -q -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz \
