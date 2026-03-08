@@ -197,60 +197,70 @@ jobs:
             source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
             function provision_devspace() {(
               set -Euo pipefail
-              mkdir -pv devspace/ devspace/llvm devspace/bin
+              mkdir -pv devspace/ devspace/bin #devspace/winsdk
               test ! -d devspace/pg && wget -q -nv https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/PortableGit-2.53.0-64-bit.7z.exe \
                 && 7z -bd -bb0 -odevspace/pg x PortableGit-2.53.0-64-bit.7z.exe
-              test ! -d devspace/llvm/bin && wget -q -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz \
-                && xz -d -c clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xf - -Cdevspace/llvm --strip-components=1
+              test ! -d devspace/llvm-19.1.0.tar.xz \
+                && wget -O devspace/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz -q -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz
+                # && xz -d -c clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xf - -Cdevspace/llvm --strip-components=1
               test ! -s devspace/bin/ninja.exe && wget -q -nv https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip \
                 && 7z -bd -bb0 -odevspace/bin x ninja-win.zip
-              test ! -s devspace/bin/xwin.exe && wget -q -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz \
-                && tar -xf xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz -Cdevspace/bin --strip-components=1 xwin-0.8.0-x86_64-pc-windows-msvc/xwin.exe
               test ! -s devspace/bin/jq.exe && wget -O devspace/bin/jq.exe -q -nv https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-windows-amd64.exe
               test ! -s devspace/python/python.exe && wget -q -nv https://www.python.org/ftp/python/3.14.3/python-3.14.3-embed-amd64.zip \
                 && unzip -d devspace/python python-3.14.3-embed-amd64.zip
               test ! -d devspace/p373r-vrmod && git -C p373r-vrmod worktree add $PWD/devspace/p373r-vrmod --force
+
+              # test ! -s devspace/bin/xwin.exe && wget -q -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz \
+                # && tar -xf xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz -Cdevspace/bin --strip-components=1 xwin-0.8.0-x86_64-pc-windows-msvc/xwin.exe
+              # test ! -s devspace/winsdk.tar.xz && XZ_OPT='-T0' tar -cJf devspace/winsdk.tar.xz winsdk
+                test ! -d devspace/winsdk/crt && sudo mount -o bind winsdk devspace/winsdk
+
               cd devspace/
               (
                 echo "experimental toolchain capture"
+                date --rfc-3339 seconds
+                echo ''
                 echo "see $GITHUB_WORKFLOW_REF"
+                echo ''
+                echo -n 'p373r-vrmod: ' && git -C p373r-vrmod describe --all
                 echo ''
                 echo '```bash'
                 declare -pf provision_devspace
                 echo '```'
-              ) | tee readme.md
+              ) > readme.md
               du -hsc *
             )}
             provision_devspace
 
-      - name: upload windows-toolchain
+      - name: upload windows-toolchain (?)
         uses: ./gha-node20-run
         if: inputs.windows-toolchain
         with:
           run: |
             set -Euo pipefail
             source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
-            cd devspace/ && gha-upload-artifact-fast windows-toolchain "$(echo "../winsdk ." | tr ' ' '\n')"
+            cd devspace/ && gha-upload-artifact-fast windows-toolchain . 1 9
 
-      - name: upload windows-toolchain a
-        uses: ./gha-node20-run
-        if: inputs.windows-toolchain
-        with:
-          run: |
-            set -Euo pipefail
-            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
-            cd devspace/ && 7z -bd -bb0 -bt -tzip a ../windows-toolchain.zip ../winsdk .
-            zipUploadStream=windows-toolchain.zip gha-upload-artifact-fast windows-toolchain-a /dev/null
+      # - name: upload windows-toolchain a (~5.5GB)
+      #   uses: ./gha-node20-run
+      #   if: inputs.windows-toolchain
+      #   with:
+      #     run: |
+      #       set -Euo pipefail
+      #       source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+      #       cd devspace/ && 7z -bd -bb0 -bt -tzip a ../windows-toolchain.zip .
+      #       zipUploadStream=windows-toolchain.zip gha-upload-artifact-fast windows-toolchain-a /dev/null
 
-      - name: upload windows-toolchain b
-        uses: ./gha-node20-run
-        if: inputs.windows-toolchain
-        with:
-          run: |
-            set -Euo pipefail
-            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
-            cd devspace/ && 7z -bd -bb0 -bt -t7z a ../windows-toolchain.7z ../winsdk .
-            gha-upload-artifact-fast windows-toolchain-b windows-toolchain.7z
+      # - name: upload windows-toolchain b (~1GB)
+      #   uses: ./gha-node20-run
+      #   if: inputs.windows-toolchain
+      #   with:
+      #     run: |
+      #       set -Euo pipefail
+      #       source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+      #       cp -av clang*.tar.xz devtime/
+      #       cd devspace/ && 7z -bd -bb0 -bt -t7z a ../windows-toolchain.7z .
+      #       gha-upload-artifact-fast windows-toolchain-b windows-toolchain.7z
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup

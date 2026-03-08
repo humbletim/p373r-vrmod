@@ -66,7 +66,7 @@ case "$CMD" in
         echo "Initializing with snapshot: $SNAPSHOT_ARG"
 
         # Verify llvm
-        LLVM_DIR="$REPO_ROOT/llvm"
+        LLVM_DIR=${LLVM_DIR:-"$REPO_ROOT/llvm"}
         test -d "$LLVM_DIR" || {
             LLVM_DIR=$(dirname "$SNAPSHOT_ARG")/llvm
             test -d "$LLVM_DIR" || fail "LLVM toolchain not found at $LLVM_DIR"
