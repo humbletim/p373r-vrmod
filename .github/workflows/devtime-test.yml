@@ -12,6 +12,12 @@ on:
             - ubuntu-latest
             - ubuntu-slim
           default: ubuntu-latest
+        executable:
+            type: boolean
+            default: true
+        windows-toolchain:
+            type: boolean
+            default: false
         autobuild-package:
             type: boolean
             default: false
@@ -120,6 +126,7 @@ jobs:
             )
 
       - name: '  edge-compile new viewer exe'
+        if: inputs.executable
         shell: bash
         run: |
           cd ./p373r-vrmod/community
@@ -130,6 +137,7 @@ jobs:
 
       - name: '/UPLOAD viewer .exe'
         uses: ./gha-node20-run
+        if: inputs.executable
         with:
           run: |
             set -Euo pipefail
@@ -153,7 +161,7 @@ jobs:
 
       - name: CACHED-official-runtime
         uses: ./gha-node20-run
-        if: inputs.screenshot
+        if: inputs.executable && inputs.screenshot
         with:
           run: |
             set -Euo pipefail
@@ -169,7 +177,7 @@ jobs:
 
       - name: wine/xvfb/screenshot stuff
         uses: ./gha-node20-run
-        if: inputs.screenshot
+        if: inputs.executable && inputs.screenshot
         with:
           run: |
             set -Euo pipefail
@@ -179,6 +187,66 @@ jobs:
             cd p373r-vrmod/community
             TIMEOUT=60 WINEPATH=../../official ../asdf/manual_screenshot.sh || true
             gha-upload-artifact-fast screenshot-region screenshot-region.jpg || exit 150
+
+      - name: inputs.windows-toolchain
+        uses: ./gha-node20-run
+        if: inputs.windows-toolchain
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            function provision_devspace() {(
+              set -Euo pipefail
+              mkdir -pv devspace/
+              wget -q -nv https://github.com/git-for-windows/git/releases/download/v2.53.0.windows.1/PortableGit-2.53.0-64-bit.7z.exe \
+                && 7z -bd -bb0 -odevspace/pg x PortableGit-2.53.0-64-bit.7z.exe
+              wget -q -nv https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.0/clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz \
+                && xz -d -c clang+llvm-19.1.0-x86_64-pc-windows-msvc.tar.xz | tar -xf - -Cdevspace/llvm --strip-components=1
+              wget -q -nv https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-win.zip \
+                && 7z -bd -bb0 -odevspace/bin x ninja-win.zip
+              wget -q -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz \
+                && tar -xf - -Cdevspace/bin --strip-components=1 xwin-0.8.0-x86_64-pc-windows-msvc/xwin.exe
+              git -C p373r-vrmod worktree add devspace/p373r-vrmod --force
+              cd devspace/
+              (
+                echo "experimental toolchain capture see $GITHUB_REPO"
+                echo ''
+                echo '```bash'
+                declare -pf provision_devspace
+                echo '```'
+              ) | tee readme.md
+              du -hsc *
+            )}
+            provision_devspace
+
+      - name: upload windows-toolchain
+        uses: ./gha-node20-run
+        if: inputs.windows-toolchain
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            cd devspace/ && gha-upload-artifact-fast windows-toolchain "$(echo "../winsdk ." | tr ' ' '\n')"
+
+      - name: upload windows-toolchain a
+        uses: ./gha-node20-run
+        if: inputs.windows-toolchain
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            cd devspace/ && 7z -bd -bb0 -bt -tzip a ../windows-toolchain.zip ../winsdk .
+            zipUploadStream=windows-toolchain.zip gha-upload-artifact-fast windows-toolchain-a /dev/null
+
+      - name: upload windows-toolchain b
+        uses: ./gha-node20-run
+        if: inputs.windows-toolchain
+        with:
+          run: |
+            set -Euo pipefail
+            source ../tpv-gha-nunja/gha/gha.upload-artifact.bash
+            cd devspace/ && 7z -bd -bb0 -bt -t7z a ../windows-toolchain.7z ../winsdk .
+            gha-upload-artifact-fast windows-toolchain-b windows-toolchain.7z
 
       - name: Setup no-frills tmate session
         if: failure() || inputs.tmate-followup
