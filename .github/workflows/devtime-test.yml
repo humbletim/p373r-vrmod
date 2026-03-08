@@ -207,12 +207,13 @@ jobs:
               test ! -s devspace/bin/xwin.exe && wget -q -nv https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz \
                 && tar -xf xwin-0.8.0-x86_64-pc-windows-msvc.tar.gz -Cdevspace/bin --strip-components=1 xwin-0.8.0-x86_64-pc-windows-msvc/xwin.exe
               test ! -s devspace/bin/jq.exe && wget -O devspace/bin/jq.exe -q -nv https://github.com/jqlang/jq/releases/download/jq-1.8.1/jq-windows-amd64.exe
-              test ! -d devspace/python/python.exe && wget -q -nv https://www.python.org/ftp/python/3.14.3/python-3.14.3-embed-amd64.zip \
+              test ! -s devspace/python/python.exe && wget -q -nv https://www.python.org/ftp/python/3.14.3/python-3.14.3-embed-amd64.zip \
                 && unzip -d devspace/python python-3.14.3-embed-amd64.zip
-              test ! -d devspace/p373r-vrmod && git -C p373r-vrmod worktree add devspace/p373r-vrmod --force
+              test ! -d devspace/p373r-vrmod && git -C p373r-vrmod worktree add $PWD/devspace/p373r-vrmod --force
               cd devspace/
               (
-                echo "experimental toolchain capture see $GITHUB_REPO"
+                echo "experimental toolchain capture"
+                echo "see $GITHUB_WORKFLOW_REF"
                 echo ''
                 echo '```bash'
                 declare -pf provision_devspace
