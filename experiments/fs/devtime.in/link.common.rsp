@@ -1,4 +1,4 @@
-    @winsdk/winsdk.rsp
+    @${devtime}/winsdk.rsp
     -Wl,-ignore:4217 -Wl,-subsystem:windows -Wl,-machine:x64 -Wno-inconsistent-dllimport
     -lmsvcprt -lpsapi -ladvapi32 -lws2_32 -lmswsock -lrpcrt4 -lshell32 -lnetapi32 -lwer -ldbghelp -lgdi32 -lcomdlg32 -ldxgi -lopengl32 -limm32 -lwinmm -lcrypt32
     -L${snapshot_dir}/3p/lib -llibpng16 -lapr-1 -laprutil-1 -llibexpat -lminizip -lzlib -lmeshoptimizer -llibcollada14dom23-s -lfreetype -ljpeg -llibhunspell -lopenjp2 -llibcurl -llibssl -llibcrypto -lOpenAL32 -lalut -llibvorbisfile -llibvorbis -llibvorbisenc -llibogg -lnghttp2.lib -llibxml2 -Llxmlrpc-epi -llibndofdev -lglu32 -lnvapi

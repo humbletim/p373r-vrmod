@@ -1,6 +1,8 @@
-    @winsdk/winsdk.rsp @${devtime}/llincludes.rsp @${snapshot_dir}/lldefines.rsp
-    @winsdk/mm.rsp
+    @${devtime}/winsdk.rsp @${devtime}/llincludes.rsp @${snapshot_dir}/lldefines.rsp
+    @${devtime}/mm.rsp
     -std=c++20
     -DLL_WINDOWS
     -isystem${snapshot_dir}/3p/include
     -isystem${snapshot_dir}/3p/include/apr-1
+  -include ${devtime}/fs.include_aliases.h
+

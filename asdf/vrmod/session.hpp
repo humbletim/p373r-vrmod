@@ -51,6 +51,7 @@ namespace nunja {
 
 #define CR_HOST CR_UNSAFE
 #define CR_DEBUG
+#pragma include_alias(<dbghelp.h>, <DbgHelp.h>) // cr.h
 #include "cr.h"
 
 #define humbletim_crmath_host

@@ -1,58 +1,37 @@
 {
     "version": 0,
     "case-sensitive": "true",
-    "overlay-relative": "true",
+    "overlay-relative": "false",
     "roots": [
-      {
-        "type": "file",
-        "name": "sdk/lib/um/x86_64/UxTheme.lib",
-        "external-contents": "sdk/lib/um/x86_64/Uxtheme.lib"
-      },
-      {
-        "type": "file",
-        "name": "sdk/lib/um/x86_64/Dbgeng.lib",
-        "external-contents": "sdk/lib/um/x86_64/DbgEng.Lib"
-      },
-      {
-        "type": "file",
-        "name": "sdk/lib/um/x86_64/Shlwapi.lib",
-        "external-contents": "sdk/lib/um/x86_64/ShLwApi.Lib"
-      },
-      {
-        "type": "file",
-        "name": "sdk/lib/um/x86_64/Dwmapi.lib",
-        "external-contents": "sdk/lib/um/x86_64/dwmapi.lib"
-      },
-      {
-        "type": "file",
-        "name": "sdk/include/um/GL/gl.h",
-        "external-contents": "sdk/include/um/gl/GL.h"
-      },
-      {
-        "type": "file",
-        "name": "sdk/include/um/GL/glu.h",
-        "external-contents": "sdk/include/um/gl/GLU.h"
-      },
-      {
-        "type": "file",
-        "name": "Dbt.h.",
-        "external-contents": "sdk/include/um/Dbt.h"
-      },
-      {
-        "type": "file",
-        "name": "sdk/include/um/WERAPI.H",
-        "external-contents": "sdk/include/um/WerApi.h"
-      },
-      {
-        "type": "file",
-        "name": "sdk/include/um/InitGuid.h",
-        "external-contents": "sdk/include/shared/initguid.h"
-      },
-      {
-        "type": "file",
-        "name": "sdk/include/um/Imm.h",
-        "external-contents": "sdk/include/um/imm.h"
-      }
+
+      { "type": "file", "name": "ws2_32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/WS2_32.Lib" },
+      { "type": "file", "name": "mswsock.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/MsWSock.Lib" },
+      { "type": "file", "name": "rpcrt4.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/RpcRT4.Lib" },
+      { "type": "file", "name": "netapi32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/NetAPI32.Lib" },
+      { "type": "file", "name": "wer.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Wer.lib" },
+      { "type": "file", "name": "dbghelp.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/DbgHelp.Lib" },
+      { "type": "file", "name": "gdi32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Gdi32.Lib" },
+      { "type": "file", "name": "comdlg32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/ComDlg32.Lib" },
+      { "type": "file", "name": "opengl32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/OpenGL32.Lib" },
+      { "type": "file", "name": "imm32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Imm32.Lib" },
+      { "type": "file", "name": "winmm.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/WinMM.Lib" },
+      { "type": "file", "name": "crypt32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Crypt32.Lib" },
+      { "type": "file", "name": "glu32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/GlU32.Lib" },
+      { "type": "file", "name": "MSVCRT.lib", "external-contents": "${winsdk}/crt/lib/x86_64/msvcrt.lib" },
+      { "type": "file", "name": "OLDNAMES.lib", "external-contents": "${winsdk}/crt/lib/x86_64/oldnames.lib" },
+      { "type": "file", "name": "uuid.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Uuid.Lib" },
+      { "type": "file", "name": "ole32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Ole32.Lib" },
+      { "type": "file", "name": "Dbgeng.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/DbgEng.Lib" },
+      { "type": "file", "name": "user32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/User32.Lib" },
+      { "type": "file", "name": "version.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Version.Lib" },
+      { "type": "file", "name": "oleaut32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/OleAut32.Lib" },
+      { "type": "file", "name": "UxTheme.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/Uxtheme.lib" },
+      { "type": "file", "name": "Dwmapi.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/dwmapi.lib" },
+      { "type": "file", "name": "Shlwapi.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/ShLwApi.Lib" },
+      { "type": "file", "name": "advapi32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/AdvAPI32.Lib" },
+      { "type": "file", "name": "kernel32.lib", "external-contents": "${winsdk}/sdk/lib/um/x86_64/kernel32.Lib" },
+
+      { "type": "file", "name": "SENTINEL", "external-contents": "SENTINEL" }
     ]
   }
 

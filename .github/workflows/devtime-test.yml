@@ -221,6 +221,14 @@ jobs:
                 echo "experimental toolchain capture"
                 date --rfc-3339 seconds
                 echo ''
+                echo '```sh'
+                echo 'cd p373r-vrmod/community'
+                echo 'env PYTHONEXECUTABLE=../../python/python.exe WINSDK_DIR=../../winsdk LLVM_DIR=../../llvm ../experiments/tpvm.sh init [fs-open-devtime]'
+                echo '../experiments/tpvm.sh compile_ llviewerdisplay.cpp lldir_win32.cpp vrmod.llviewerdisplay.hpp llviewerVR.cpp ../asdf/humbletim/opengl.hpp ../asdf/humbletim/xopenvr.hpp'
+                echo '../experiments/tpvm.sh link'
+                echo 'PATH=[factory_runtime] ./fs-open.exe'
+                echo '```'
+                echo ''
                 echo "see $GITHUB_WORKFLOW_REF"
                 echo ''
                 echo -n 'p373r-vrmod: ' && git -C p373r-vrmod describe --all
