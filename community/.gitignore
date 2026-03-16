@@ -1,4 +1,7 @@
 !3p-community-vrmod
+3p-webrtc
+/3p-webrtc
+
 !makefile
 !llviewerVR*.cpp
 !llviewerVR*.hpp

@@ -33,8 +33,8 @@ DWORD MyGetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSize) {
   WCHAR szAppDataPath[MAX_PATH]{};
   dwResult = GetEnvironmentVariableW(L"EXEROOT", szAppDataPath, MAX_PATH);
   fprintf(stdout, "dwResult=%ld EXEROOT=%S\n", dwResult, szAppDataPath);fflush(stdout);
-  if (dwResult == 0) dwResult = FindDllFolderInPath(L"llwebrtc.dll", szAppDataPath, MAX_PATH);
-  fprintf(stdout, "dwResult=%ld llwebrtc.dll=%S\n", dwResult, szAppDataPath);fflush(stdout);
+  if (dwResult == 0) dwResult = FindDllFolderInPath(L"slplugin.exe", szAppDataPath, MAX_PATH);
+  fprintf(stdout, "dwResult=%ld slplugin.exe=%S\n", dwResult, szAppDataPath);fflush(stdout);
   if (dwResult == 0) return dwResult;
   DWORD dwRequiredSize = dwResult + (DWORD)wcslen(lpFileNameOnly) + 2; // +1 for potential dir separator and +1 for null terminator
   if ((DWORD) wcslen(szAppDataPath) < nSize) {

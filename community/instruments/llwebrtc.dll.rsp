@@ -1,0 +1,5 @@
+@env/winsdk.rsp -shared -Wl,-subsystem:windows -fms-runtime-lib=static
+3p-webrtc/lib/release/webrtc.lib
+-lpsapi -ladvapi32
+-lws2_32 -lmswsock -lrpcrt4 -lshell32 -lnetapi32 -lwer -ldbghelp -lgdi32 -lcomdlg32 -ldxgi -lopengl32 -limm32 -lwinmm -lcrypt32 -lmsdmo -ldmoguids -liphlpapi -lwmcodecdspuuid
+
