@@ -1,0 +1,7 @@
+@env/compile.rsp
+"-D_CRT_USE_BUILTIN_OFFSETOF=\"reminder: this define is required to prevent absl/ucrt from vomiting on offsetof\""
+"-Dwebrtc_comment=\"download and unpack factory autobuild.xml webrtc...windows64.tar.zst to ./3p-webrtc/\""
+-I./3p-webrtc/include/webrtc
+-I./3p-webrtc/include/webrtc/third_party/abseil-cpp
+-fms-runtime-lib=static
+-include instruments/LOG_DEDUPE.hpp

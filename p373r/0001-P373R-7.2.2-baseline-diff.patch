@@ -1,5 +1,7 @@
---- fs-7.2.2-preview-devtime-noavx/source/newview/llviewerdisplay.cpp	2025-10-17 19:50:32.847253600 +0000
-+++ winxtropia-vrmod.llviewerdisplay.cpp	2025-10-22 02:32:46.309799800 +0000
+diff --git a/llviewerdisplay.cpp b/llviewerdisplay.cpp
+index fa6d16327a..3946ab35d2 100644
+--- a/llviewerdisplay.cpp
++++ b/llviewerdisplay.cpp
 @@ -26,6 +26,11 @@
  
  #include "llviewerprecompiledheaders.h"
@@ -12,7 +14,7 @@
  #include "llviewerdisplay.h"
  
  #include "fsyspath.h"
-@@ -833,6 +838,12 @@
+@@ -833,6 +838,12 @@ void display(bool rebuild, F32 zoom_factor, int subfield, bool for_snapshot)
              gPipeline.toggleRenderType(LLPipeline::RENDER_TYPE_HUD_PARTICLES);
          }
  
@@ -25,7 +27,7 @@
          stop_glerror();
          display_update_camera();
          stop_glerror();
-@@ -1152,7 +1163,29 @@
+@@ -1152,7 +1163,29 @@ void display(bool rebuild, F32 zoom_factor, int subfield, bool for_snapshot)
          if (!for_snapshot)
          {
              render_ui();
@@ -35,7 +37,7 @@
 +			//################################### END P373R ######################################
 +			//swap();
 +			//################################### P373R ######################################
-+			if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.eyeDistance() > 0)
++			if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.m_fEyeDistance > 0)
 +			{
 +				goto sec;
 +
@@ -55,7 +57,7 @@
          }
  
  
-@@ -1782,6 +1815,10 @@
+@@ -1782,6 +1815,10 @@ void render_ui_3d()
      gUIProgram.bind();
      gGL.color4f(1.f, 1.f, 1.f, 1.f);
  
@@ -66,7 +68,7 @@
      // Coordinate axes
      static LLCachedControl<bool> show_axes(gSavedSettings, "ShowAxes");
      if (show_axes())
-@@ -1929,6 +1966,10 @@
+@@ -1929,6 +1966,10 @@ void render_ui_2d()
          gViewerWindow->draw();
      }
  
@@ -77,7 +79,7 @@
      // reset current origin for font rendering, in case of tiling render
      LLFontGL::sCurOrigin.set(0, 0);
  }
-@@ -2012,5 +2053,8 @@
+@@ -2012,5 +2053,8 @@ void render_disconnected_background()
  
  void display_cleanup()
  {

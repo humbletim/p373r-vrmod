@@ -1,8 +1,9 @@
 @echo off
 setlocal
-set XWIN_VER=0.6.5
+set XWIN_VER=0.6.6
 set SDKVER=10.0.26100
 set CRTVER=14.44.17.14
+set VARIANTS=desktop
 set SDKROOT=winsdk
 
 REM attempts to download and unpack an *intree* set of compatible Windows SDK libraries and headers  
@@ -28,7 +29,8 @@ if exist %SDKROOT%\sdk\include\um\Windows.h (
 if not exist bin\xwin.exe (
   echo -- Downloading xwin...
   if not exist bin (mkdir bin)
-  %SYSTEMROOT%\System32\curl.exe -s -L https://github.com/Jake-Shadle/xwin/releases/download/%XWIN_VER%/xwin-%XWIN_VER%-x86_64-pc-windows-msvc.tar.gz | %SYSTEMROOT%\System32\tar.exe -xf - -Cbin --strip-components=1 xwin-%XWIN_VER%-x86_64-pc-windows-msvc/xwin.exe
+  %SYSTEMROOT%\System32\curl.exe -s -L -o tmp\xwin.tar.gz https://github.com/Jake-Shadle/xwin/releases/download/%XWIN_VER%/xwin-%XWIN_VER%-x86_64-pc-windows-msvc.tar.gz
+  pg\usr\bin\gzip -d -c tmp\xwin.tar.gz | pg\usr\bin\tar -xf - -Cbin --strip-components=1 xwin-%XWIN_VER%-x86_64-pc-windows-msvc/xwin.exe
 ) else (
   echo -- Existing xwin.exe found
   bin\xwin.exe --version
@@ -37,11 +39,11 @@ if not exist bin\xwin.exe (
 REM --include-debug-libs 
 
 echo -- downloading SDK components to tmp/ ...
-  bin\xwin -Loff --cache-dir=tmp %MANIFEST_OPT% --crt-version %CRTVER% --sdk-version %SDKVER% download
+  bin\xwin -Loff --cache-dir=tmp %MANIFEST_OPT% --variant %VARIANTS% --crt-version %CRTVER% --sdk-version %SDKVER% download
 if errorlevel 1 (echo error invoking xwin winsdk download && exit /b 1)
 
 echo -- unpacking SDK components to %SDKROOT% ...
-  bin\xwin --accept-license -Loff --cache-dir=tmp %MANIFEST_OPT% --crt-version %CRTVER% --sdk-version %SDKVER% splat --vfsoverlay --output %SDKROOT%
+  bin\xwin --accept-license -Loff --cache-dir=tmp %MANIFEST_OPT% --variant %VARIANTS% --crt-version %CRTVER% --sdk-version %SDKVER% splat --output %SDKROOT%
 if errorlevel 1 (echo error invoking xwin winsdk splat && exit /b 1)
 
 :done

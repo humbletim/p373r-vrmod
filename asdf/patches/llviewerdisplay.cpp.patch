@@ -1,0 +1,19 @@
+--- snapshot/source/newview/llviewerdisplay.cpp	2026-01-15 15:34:23.906701496 -0500
++++ llviewerdisplay.cpp	2026-01-19 15:40:20.298579262 -0500
+@@ -837,6 +837,8 @@
+         display_update_camera();
+         stop_glerror();
+ 
++        sec: vrmod_llviewerdisplay_begin_render(); // <FS:VR:humbletim />
++
+         {
+             LL_PROFILE_ZONE_NAMED_CATEGORY_DISPLAY("Env Update");
+             // update all the sky/atmospheric/water settings
+@@ -1152,6 +1154,7 @@
+         if (!for_snapshot)
+         {
+             render_ui();
++            if (vrmod_llviewerdisplay_capture_and_continue_render()) goto sec; // <FS:VR:humbletim />
+             swap();
+         }
+ 

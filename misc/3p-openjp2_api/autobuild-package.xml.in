@@ -1,0 +1,41 @@
+<?xml version="1.0" ?>
+<llsd>
+<map>
+    <key>build_id</key>
+    <string>$commit</string>
+    <key>configuration</key>
+    <string>default</string>
+    <key>manifest</key>
+    <array>
+      <string>LICENSES/openjp2.txt</string>
+      <string>include/openjpeg.h</string>
+      <string>include/openjpeg/</string>
+    </array>
+    <key>package_description</key>
+    <map>
+      <key>copyright</key>
+      <string>Copyright (c) 2026 humbletim
+Copyright (c) 2002-2007, Communications and Remote Sensing Laboratory, Universite catholique de Louvain (UCL), Belgium; Copyright (c) 200
+2-2007, Professor Benoit Macq; Copyright (c) 2001-2003, David Janssens; Copyright (c) 2002-2003, Yannick Verschueren; Copyright (c) 2003-2007, Francois-O
+livier Devaux and Antonin Descampe; Copyright (c) 2005, Herve Drolon, FreeImage Team; Copyright (c) 2006-2007, Parvatha Elangovan; Copyright (c) 2008, Je
+rome Fimes, Communications &amp; Systemes &lt;jerome.fimes@c-s.fr&gt;; Copyright (c) 2010-2011, Kaori Hagihara; Copyright (c) 2011-2012, Centre National 
+d'Etudes Spatiales (CNES), France; Copyright (c) 2012, CS Systemes d'Information, France;</string>
+      <key>description</key>
+      <string>The OpenJPEG library is an open-source JPEG 2000 codec written in C language.</string>
+      <key>license</key>
+      <string>BSD</string>
+      <key>license_file</key>
+      <string>LICENSES/openjp2.txt</string>
+      <key>name</key>
+      <string>openjp2_api</string>
+      <key>version</key>
+      <string>$tag.$commit</string>
+    </map>
+    <key>platform</key>
+    <string>windows64</string>
+    <key>type</key>
+    <string>metadata</string>
+    <key>version</key>
+    <string>1</string>
+  </map>
+</llsd>

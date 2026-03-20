@@ -1,0 +1,10 @@
+--- snapshot/source/newview/llagentcamera.cpp	2025-10-27 15:35:27.000000000 -0400
++++ llagentcamera.cpp	2026-01-19 14:51:25.057513547 -0500
+@@ -1594,6 +1594,7 @@
+     LLVector3 focus_agent = gAgent.getPosAgentFromGlobal(mFocusGlobal);
+     LLVector3 position_agent = gAgent.getPosAgentFromGlobal(camera_pos_global);
+ 
++    vrmod_LLAgentCamera_tweak_agent_camera(position_agent.mV, mCameraUpVector.mV, focus_agent.mV);
+     // Try to move the camera
+ 
+     if (!LLViewerCamera::getInstance()->updateCameraLocation(position_agent, mCameraUpVector, focus_agent))

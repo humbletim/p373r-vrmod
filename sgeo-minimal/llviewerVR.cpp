@@ -29,9 +29,6 @@
 #define sprintf_s(buffer, buffer_size, stringbuffer, ...) (sprintf(buffer, stringbuffer, __VA_ARGS__))
 #endif
 
-// DebugSettings approach
-#include "llviewerVR.vrmod_settings.c++" // gVrModSettings
-
 //#include <time.h>
 //#include <sys/time.h>
 llviewerVR::llviewerVR()
@@ -565,10 +562,6 @@ void llviewerVR::SetupCameras()
 	m_mat4eyePosRight = GetHMDMatrixPoseEye(vr::Eye_Right);
 	//gM4eyePosRight = ConvertGLHMatrix4ToLLMatrix4(m_mat4eyePosRight);
 	//gM4eyePosRight.invert();
-
-	if (gVrModSettings->cameraAngle != 0.0f) {
-		gSavedSettings.setF32("CameraAngle", gVrModSettings->cameraAngle);
-	}
 }
 
 bool llviewerVR::CreateFrameBuffer(int nWidth, int nHeight, FramebufferDesc &framebufferDesc)
@@ -776,43 +769,9 @@ bool llviewerVR::ProcessVRCamera()
 		InitUI();
 		//m_fNearClip = LLViewerCamera::getInstance()->getNear();
 		//m_fFarClip = LLViewerCamera::getInstance()->getFar();
+		LLViewerCamera::getInstance()->setNear(0.001);
 
-
-		// 
-		// CONTEXT: The stock LLCamera::setNear() method clamps the near clip plane to a minimum
-		// of MIN_NEAR_PLANE (0.1f). For VR, a much smaller value is often necessary to prevent
-		// objects near the user (like the avatar's body) from clipping out of view.
-		//
-		// STRATEGY: Modifying the upstream LLCamera class is not a viable option for this
-		// specialized VR use case. Instead, we employ a "passive" or "outside-in" workaround
-		// by directly manipulating the camera's internal frustum data in memory. This bypasses
-		// the clamping logic in the public setter method. This approach allows us to achieve
-		// the desired effect while maintaining full compatibility with the upstream code,
-		// ensuring our changes persist across future updates without requiring code merges.
-		//
-		// This is a practical example of maintaining a downstream feature set where direct
-		// upstream contributions may not be feasible. -humbletim 2025.08.18
-		if (gVrModSettings->nearClip > 0.0f) // A value > 0 indicates an override is requested.
-		{
-			// A temporary struct to serve as a proxy for the camera's internal frustum data.
-			static struct
-			{
-				F32 mView;
-				F32 mAspect;
-				F32 mNearPlane;
-				F32 mFarPlane;
-			} frustumProxy{};
-
-			// 1. Read the camera's current frustum state into our local proxy struct.
-			LLViewerCamera::getInstance()->writeFrustumToBuffer(reinterpret_cast<char*>(&frustumProxy));
-
-			// 2. Modify the near plane value in our local copy to apply the custom setting.
-			frustumProxy.mNearPlane = gVrModSettings->nearClip;
-
-			// 3. Write the modified data back to the camera object, effectively bypassing
-			//    the clamped LLCamera::setNear() method.
-			LLViewerCamera::getInstance()->readFrustumFromBuffer(reinterpret_cast<const char*>(&frustumProxy));
-		}
+		
 
 		if (!leftEyeDesc.IsReady && !rightEyeDesc.IsReady)//Starting rendering with first (left) eye of stereo rendering
 		{
@@ -998,6 +957,7 @@ void llviewerVR::vrDisplay()
 				S32 thirdx = tx / 3;
 				S32 thirdy = ty / 3;
 				
+
 				if (m_MousePos.mX > tx - div8x && m_MousePos.mY < div8y)//up right
 				{
 					m_iZoomIndex = 4;
@@ -1036,7 +996,7 @@ void llviewerVR::vrDisplay()
 				}
 
 				///Zoom in
-				if (m_iZoomIndex == 0 || !gVrModSettings->mousezoom)
+				if (m_iZoomIndex == 0)
 				{
 					bx +=   m_fTextureZoom;
 					by +=   m_fTextureZoom;
@@ -1463,7 +1423,7 @@ void llviewerVR::HandleKeyboard()
 
 void llviewerVR::DrawCursors()
 {
-	if (!m_bVrActive || (!gVrModSettings->handlasers && !gVrModSettings->mousecursor))
+	if (!m_bVrActive)
 		return;
 	gUIProgram.bind();
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -1486,7 +1446,6 @@ void llviewerVR::DrawCursors()
 	WI->getCursorPosition(&mcpos);
 	LLCoordGL mpos = gViewerWindow->getCurrentMouse();
 
-	if (!gVrModSettings->handlasers)
 	for (vr::TrackedDeviceIndex_t unTrackedDevice = vr::k_unTrackedDeviceIndex_Hmd + 1; unTrackedDevice < vr::k_unMaxTrackedDeviceCount; ++unTrackedDevice)
 	{
 		if (gCtrlscreen[unTrackedDevice].mX > -1)
@@ -1497,7 +1456,6 @@ void llviewerVR::DrawCursors()
 
 	}
 
-	if (gVrModSettings->mousecursor)
 	if (gAgentCamera.getCameraMode() != CAMERA_MODE_MOUSELOOK)
 	{
 		LLColor4 cl;
@@ -1533,7 +1491,7 @@ void llviewerVR::RenderControllerAxes()
 	if (gHMD == NULL)
 		return;
 	HandleInput();
-	if (!gHMD->IsInputAvailable() || !m_bVrActive || !gVrModSettings->handcontrollers)
+	if (!gHMD->IsInputAvailable() || !m_bVrActive)
 		return;
 
 	//std::vector<float> vertdataarray;
@@ -1631,7 +1589,6 @@ void llviewerVR::RenderControllerAxes()
 
 
 	
-		if (gVrModSettings->handlasers) {
 		//draw the controller lines in world  ( make tham nicer ;>)
 		LLGLSUIDefault gls_ui;
 		gGL.getTexUnit(0)->unbind(LLTexUnit::TT_TEXTURE);
@@ -1648,9 +1605,7 @@ void llviewerVR::RenderControllerAxes()
 		gGL.end();
 		gGL.popMatrix();
 		glEnable(GL_DEPTH_TEST);
-		}
 
-		if (gVrModSettings->handcontrollers) {
 		//EVRControllerAxisType
 		//read the input from the available controllers
 		vr::VRControllerState_t state;
@@ -1812,7 +1767,7 @@ void llviewerVR::RenderControllerAxes()
 				}
 
 			}
-		}
+
 		}
 	}
 	

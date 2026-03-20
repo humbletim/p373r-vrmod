@@ -5,7 +5,7 @@ openvr_dir=$(dirname "${BASH_SOURCE}")
 function verify_openvr_from_packages_json() {
   local tarball=$1 json=${2:-$1.json}
   jq --arg tarball "$tarball" -r '.openvr.hash + "\t" + $tarball' $json \
-    | tr -d '\r' | tee /dev/stderr | md5sum --strict --check
+    | tr -d '\r' | md5sum --strict --check
 }
 
 function provision_openvr() {(
@@ -29,6 +29,7 @@ function provision_openvr() {(
     cd stage
     mkdir -pv lib/release include LICENSES
 
+    cp -av ../openvr_api.viewer_manifest.patch lib/release/
     # openvr repo is hundreds of megabytes... we just need headers, win64 .lib and win64 .dll
     ovr=https://rawcdn.githack.com/ValveSoftware/openvr/$tag
     function _wget() { echo "fetching $@" >&2 ; wget -nv -nc "$@" ; }
@@ -41,7 +42,7 @@ function provision_openvr() {(
    autobuild-package.xml
    LICENSES/openvr.txt
    include/openvr.h
-   lib/release/openvr_api.{dll,lib}
+   lib/release/openvr_api.{dll,lib,viewer_manifest.patch}
   )
 
   for x in ${FILES[@]} ; do test -s stage/$x || { echo "'$x' invalid" >&2 ; exit 38 ; } ; done || return 61

@@ -1,0 +1,39 @@
+--- snapshot/source/newview/pipeline.cpp	2025-10-27 15:35:27.000000000 -0400
++++ pipeline.cpp	2026-01-26 17:46:03.559436328 -0500
+@@ -816,7 +816,7 @@
+             scaledResX /= RenderResolutionDivisor;
+             scaledResY /= RenderResolutionDivisor;
+         }
+-        else if (RenderResolutionMultiplier > 0.f && RenderResolutionMultiplier < 1.f)
++        else if (RenderResolutionMultiplier > 0.f && RenderResolutionMultiplier < 4.f)
+         {
+             scaledResX = (GLuint)(scaledResX * RenderResolutionMultiplier);
+             scaledResY = (GLuint)(scaledResY * RenderResolutionMultiplier);
+@@ -947,7 +947,7 @@
+         resY /= res_mod;
+     }
+ // [SL:KB] - Patch: Settings-RenderResolutionMultiplier | Checked: Catznip-5.4
+-    else if (RenderResolutionMultiplier > 0.f && RenderResolutionMultiplier < 1.f)
++    else if (RenderResolutionMultiplier > 0.f && RenderResolutionMultiplier < 4.f)
+     {
+         resX = (GLuint)(resX * RenderResolutionMultiplier);
+         resY = (GLuint)(resY * RenderResolutionMultiplier);
+@@ -8131,12 +8131,13 @@
+                 mFXAAMap.bindTexture(0, channel, LLTexUnit::TFO_BILINEAR);
+             }
+ 
+-            gGLViewport[0] = gViewerWindow->getWorldViewRectRaw().mLeft;
+-            gGLViewport[1] = gViewerWindow->getWorldViewRectRaw().mBottom;
+-            gGLViewport[2] = gViewerWindow->getWorldViewRectRaw().getWidth();
+-            gGLViewport[3] = gViewerWindow->getWorldViewRectRaw().getHeight();
++            // let dst->bindTarget configure viewport
++            // gGLViewport[0] = gViewerWindow->getWorldViewRectRaw().mLeft;
++            // gGLViewport[1] = gViewerWindow->getWorldViewRectRaw().mBottom;
++            // gGLViewport[2] = gViewerWindow->getWorldViewRectRaw().getWidth();
++            // gGLViewport[3] = gViewerWindow->getWorldViewRectRaw().getHeight();
+ 
+-            glViewport(gGLViewport[0], gGLViewport[1], gGLViewport[2], gGLViewport[3]);
++            // glViewport(gGLViewport[0], gGLViewport[1], gGLViewport[2], gGLViewport[3]);
+ 
+             F32 scale_x = (F32)width / mFXAAMap.getWidth();
+             F32 scale_y = (F32)height / mFXAAMap.getHeight();
