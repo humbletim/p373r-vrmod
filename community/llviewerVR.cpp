@@ -700,7 +700,15 @@ void llviewerVR::vrStartup(bool is_shutdown)
 				gVRInitComplete = TRUE;
 				vr::VRCompositor()->SetTrackingSpace(vr::TrackingUniverseSeated);
 				gHMD->GetRecommendedRenderTargetSize(&m_nRenderWidth, &m_nRenderHeight);
-				
+
+				if (gVrModSettings->renderWidthOverride != 0
+					&& gVrModSettings->renderHeightOverride != 0
+					&& gVrModSettings->renderWidthOverride < 16384
+					&& gVrModSettings->renderHeightOverride < 16384) 
+				{
+					m_nRenderHeight=gVrModSettings->renderHeightOverride;
+					m_nRenderWidth=gVrModSettings->renderWidthOverride;
+				}
 				//m_nRenderHeight	=	1440;
 				//m_nRenderWidth	=	1440;
 				//if (leftEyeDesc.m_nResolveTextureId == NULL)
@@ -839,13 +847,24 @@ bool llviewerVR::ProcessVRCamera()
 			float mult = (float)m_nRenderWidth / (float)m_nRenderHeight;
 			if (m_nRenderHeight<m_nRenderWidth)
 			mult = (float)m_nRenderHeight / (float)m_nRenderWidth;
-			
+
 			m_ScrSize.mX = (scrsize*mult)*0.95;
 			m_ScrSize.mY = (scrsize)*0.95;
-			if (m_ScrSizeOld.mX != m_ScrSize.mX || m_ScrSizeOld.mY != m_ScrSize.mY)
+			if (gVrModSettings->windowWidthOverride != 0 
+				&& gVrModSettings->windowHeightOverride != 0 
+				&& gVrModSettings->windowWidthOverride < 16384
+				&& gVrModSettings->windowHeightOverride < 16384) 
 			{
-				m_ScrSize.set(m_ScrSize.mX, m_ScrSize.mY);
-				WI->setSize(m_ScrSize);
+				m_ScrSize.mX=gVrModSettings->windowWidthOverride;
+				m_ScrSize.mY=gVrModSettings->windowHeightOverride;
+			}	
+			if (gVrModSettings->resizeWindow) 
+			{
+				if (m_ScrSizeOld.mX != m_ScrSize.mX || m_ScrSizeOld.mY != m_ScrSize.mY)
+				{
+					m_ScrSize.set(m_ScrSize.mX, m_ScrSize.mY);
+					WI->setSize(m_ScrSize);
+				}
 			}
 			//Constrain the cursor to the viewer window.
 			if (m_MousePos.mX >= m_ScrSize.mX)
