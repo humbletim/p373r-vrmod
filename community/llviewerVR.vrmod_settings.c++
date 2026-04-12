@@ -80,7 +80,19 @@ struct VrModSettings {
         "0.001 is a good value to try using; 0.015 is a good compromise to avoid z-fighting.\n"
         "Note: When VR Mode is active, this setting can be changed live to test the effect of different near clipping thresholds."
     };
-
+    LLCachedControl<U32>  windowWidthOverride{ gSavedSettings, "vrmod.windowWidthOverride", DEFAULTS.at("windowWidthOverride").to_number<U32>(),
+        "Set to > 0 to override window Width"
+    };
+    LLCachedControl<U32>  windowHeightOverride{ gSavedSettings, "vrmod.windowHeightOverride", DEFAULTS.at("windowHeightOverride").to_number<U32>(),
+        "Set to > 0 to override window Height"
+    };
+    LLCachedControl<U32>  renderWidthOverride{ gSavedSettings, "vrmod.renderWidthOverride", DEFAULTS.at("renderWidthOverride").to_number<U32>(),
+        "Set to > 0 to override render Width"
+    };
+    LLCachedControl<U32>  renderHeightOverride{ gSavedSettings, "vrmod.renderHeightOverride", DEFAULTS.at("renderHeightOverride").to_number<U32>(),
+        "Set to > 0 to override render Height"
+    };   
+    LLCachedControl<bool> resizeWindow{ gSavedSettings, "vrmod.resizeWindow", DEFAULTS.at("resizeWindow").as_bool(), "Resize window and switch to windowed mode for VR(set to false if using overrides and full screen mode)" }; 
     // Updates a single property within the persisted JSON blob.
     void updateJsonEntry(std::string const& key, LLSD const& newValue);
 
@@ -98,6 +110,11 @@ struct VrModSettings {
     { "mousecursor",     true },
     { "cameraAngle",     0.0f },
     { "nearClip",        0.0f },
+    { "windowWidthOverride", 0},
+    { "windowHeightOverride",0},
+    { "renderWidthOverride", 0},
+    { "renderHeightOverride",0},
+    { "resizeWindow",     true}
 };
 
 namespace {
