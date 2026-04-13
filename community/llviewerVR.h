@@ -110,7 +110,6 @@ public:
 	S32 m_iThirdHeight;
 	
 	S32 m_iMenuIndex;
-	F32 m_fFocusDistance;
 	F32 m_fTextureShift;
 	F32 m_fFOV;
 	F32 m_fTextureZoom;

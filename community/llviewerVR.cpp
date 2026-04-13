@@ -45,7 +45,6 @@ llviewerVR::llviewerVR()
 	hud_textp = NULL;
 	m_kEditKey = KEY_F4;
 	m_kDebugKey = KEY_F3;
-	m_fFocusDistance = 1;
 	m_fTextureShift = 0;
 	m_fTextureZoom = 0;
 	m_fFOV = 100;
@@ -964,19 +963,19 @@ bool llviewerVR::ProcessVRCamera()
 		{
 			if (eyeDistance() == 0)
 				LLViewerCamera::getInstance()->lookDir(m_vdir_orig, m_vup_orig);
-			new_dir = (m_vleft * (eyeDistance() / 1000));
+			new_dir = (m_vleft * (eyeDistance() / 2000));
 		}
 		else
 		{
 			if (eyeDistance() == 0)
 				LLViewerCamera::getInstance()->lookDir(m_vdir, m_vup);
-			new_dir = (-m_vleft * (eyeDistance() / 1000));
+			new_dir = (-m_vleft * (eyeDistance() / 2000));
 		}
 			
 		
 		if (eyeDistance() > 0)
 		{	
-			LLVector3 new_fwd_pos = m_vpos + (m_vdir * m_fFocusDistance);
+			LLVector3 new_fwd_pos = m_vpos + (m_vdir * gVrModSettings->focusDistance);
 			
 			if (!leftEyeDesc.IsReady)//change pos for rendering the left eye texture.Move half IPD distance to the left
 			{

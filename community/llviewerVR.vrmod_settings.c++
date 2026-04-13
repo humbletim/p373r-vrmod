@@ -80,6 +80,9 @@ struct VrModSettings {
         "0.001 is a good value to try using; 0.015 is a good compromise to avoid z-fighting.\n"
         "Note: When VR Mode is active, this setting can be changed live to test the effect of different near clipping thresholds."
     };
+    LLCachedControl<F32> focusDistance{ gSavedSettings, "vrmod.focusDistance", DEFAULTS.at("focusDistance").to_number<float>(),
+        "Set to override focusDistance"
+    };
     LLCachedControl<U32>  windowWidthOverride{ gSavedSettings, "vrmod.windowWidthOverride", DEFAULTS.at("windowWidthOverride").to_number<U32>(),
         "Set to > 0 to override window Width"
     };
@@ -109,6 +112,7 @@ struct VrModSettings {
     { "mousezoom",       true },
     { "mousecursor",     true },
     { "cameraAngle",     0.0f },
+    { "focusDistance",   1.0f },
     { "nearClip",        0.0f },
     { "windowWidthOverride", 0},
     { "windowHeightOverride",0},
