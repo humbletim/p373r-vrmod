@@ -110,7 +110,6 @@ public:
 	S32 m_iThirdHeight;
 	
 	S32 m_iMenuIndex;
-	F32 m_fFocusDistance;
 	F32 m_fTextureShift;
 	F32 m_fFOV;
 	F32 m_fTextureZoom;
@@ -200,6 +199,7 @@ public:
 	void ProcessVREvent(const vr::VREvent_t & event);
 	void agentYaw(F32 yaw_inc);
 	bool ProcessVRCamera();
+	bool RestoreVRCamera();
 	std::string GetTrackedDeviceString(vr::IVRSystem *pHmd, vr::TrackedDeviceIndex_t unDevice, vr::TrackedDeviceProperty prop, vr::TrackedPropertyError *peError = NULL);
 	void RenderControllerAxes();
 	BOOL posToScreen(const LLVector3 &pos_agent, LLCoordGL &out_point, const BOOL clamp) const;

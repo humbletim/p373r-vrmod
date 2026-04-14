@@ -644,6 +644,15 @@ void llviewerVR::vrStartup(bool is_shutdown)
 				
 				//m_nRenderHeight	=	1440;
 				//m_nRenderWidth	=	1440;
+
+				// using environment variables so settings can be changed if the resolution is set incorrectly and the UI doesn't work
+				// optional overrides for render target size if environment variables are set
+				if (getenv("FSVRRenderHeight") && getenv("FSVRRenderWidth")) 
+				{
+					m_nRenderHeight=atoi(getenv("FSVRRenderHeight"));
+					m_nRenderWidth=atoi(getenv("FSVRRenderWidth"));
+				}
+				
 				//if (leftEyeDesc.m_nResolveTextureId == NULL)
 				CreateFrameBuffer(m_nRenderWidth, m_nRenderHeight, leftEyeDesc);
 				//if (rightEyeDesc.m_nResolveTextureId == NULL)
@@ -746,14 +755,30 @@ bool llviewerVR::ProcessVRCamera()
 			float mult = (float)m_nRenderWidth / (float)m_nRenderHeight;
 			if (m_nRenderHeight<m_nRenderWidth)
 			mult = (float)m_nRenderHeight / (float)m_nRenderWidth;
-			
-			m_ScrSize.mX = (scrsize*mult)*0.95;
-			m_ScrSize.mY = (scrsize)*0.95;
-			if (m_ScrSizeOld.mX != m_ScrSize.mX || m_ScrSizeOld.mY != m_ScrSize.mY)
+		
+			// using environment variables so settings can be changed if the resolution is set incorrectly and the UI doesn't work
+			// optional overrides for screen size if environment variables are set
+			if (getenv("FSVRScreenHeight") && getenv("FSVRScreenWidth")) 
 			{
-				m_ScrSize.set(m_ScrSize.mX, m_ScrSize.mY);
-				WI->setSize(m_ScrSize);
+				m_ScrSize.mX = atoi(getenv("FSVRScreenWidth"))*1.0;
+				m_ScrSize.mY = atoi(getenv("FSVRScreenHeight"))*1.0;
+			} 
+			else 
+			{
+				m_ScrSize.mX = (scrsize*mult)*0.95;
+				m_ScrSize.mY = (scrsize)*0.95;
 			}
+
+			// optional override to prevent switch between fullscreen and windowed
+			if (!getenv("FSVRNoResize")) 
+			{
+				if (m_ScrSizeOld.mX != m_ScrSize.mX || m_ScrSizeOld.mY != m_ScrSize.mY)
+				{
+					m_ScrSize.set(m_ScrSize.mX, m_ScrSize.mY);
+					WI->setSize(m_ScrSize);
+				}
+			}
+
 			//Constrain the cursor to the viewer window.
 			if (m_MousePos.mX >= m_ScrSize.mX)
 				m_MousePos.mX = m_ScrSize.mX - 1;
