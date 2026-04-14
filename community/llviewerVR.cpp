@@ -745,6 +745,45 @@ void llviewerVR::vrStartup(bool is_shutdown)
 	
 }
 
+// RestoreVRCamera needs to be added to the patch like this
+/*
+	if (gVR.leftEyeDesc.IsReady  && !gVR.rightEyeDesc.IsReady && gVR.eyeDistance() > 0)
+	{
+
+			goto sec;
+
+
+	}
+	gVR.RestoreVRCamera();
+*/
+
+bool llviewerVR::RestoreVRCamera() {
+	if (m_bVrActive)
+	{
+	        if (eyeDistance() > 0)
+	        {
+	                LLVector3 new_dir;
+	                if (m_bEditActive)// lock HMD's rotation input for inworls object editing purposes.
+	                {
+	                        if (eyeDistance() == 0)
+	                                LLViewerCamera::getInstance()->lookDir(m_vdir_orig, m_vup_orig);
+	                        new_dir = (m_vleft * (eyeDistance() / 2000));
+	                }
+	                else
+	                {
+	                        if (eyeDistance() == 0)
+	                                LLViewerCamera::getInstance()->lookDir(m_vdir, m_vup);
+	                        new_dir = (-m_vleft * (eyeDistance() / 2000));
+	                }
+
+					LLVector3 new_fwd_pos = m_vpos + (m_vdir * gVrModSettings->focusDistance);
+	                LLViewerCamera::getInstance()->updateCameraLocation(m_vpos + new_dir, m_vup, new_fwd_pos);
+					return TRUE;
+	        }
+	}
+	return FALSE;
+}
+
 bool llviewerVR::ProcessVRCamera()
 {
 	
@@ -983,7 +1022,7 @@ bool llviewerVR::ProcessVRCamera()
 			}
 			else if (!rightEyeDesc.IsReady)//change pos for rendering the right eye texture. Move full IPD distance to the right since we were on the left eye position.
 			{
-				LLViewerCamera::getInstance()->updateCameraLocation(m_vpos - new_dir, m_vup, new_fwd_pos);
+				LLViewerCamera::getInstance()->updateCameraLocation(m_vpos - (new_dir*2.0f), m_vup, new_fwd_pos);
 			}
 		}
 		
