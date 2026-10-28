@@ -103,7 +103,7 @@ struct VrModSettings {
 namespace {
     // Safely parses a string into a boost::json::object, returning an empty object on failure.
     boost::json::object safe_json_parse(std::string const& json_string) {
-        boost::json::error_code ec;
+        boost::system::error_code ec;
         auto parsed_value = boost::json::parse(json_string, ec);
         if (ec || !parsed_value.is_object()) {
             return boost::json::object();
